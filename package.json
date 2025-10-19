@@ -1,0 +1,17 @@
+{
+  "name": "knight-trap",
+  "version": "1.0.0",
+  "description": "High-speed arcade survival game with React.js and Pixi.js",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx live-server --port=3000 --open=/index.html"
+  },
+  "keywords": ["game", "react", "pixi.js", "arcade", "survival"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  }
+}
