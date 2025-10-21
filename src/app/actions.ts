@@ -9,10 +9,10 @@ export async function getShadowKnightMoves(
   shadowKnightPositions: Position[],
   board: BoardSquare[][],
   bombs: Bomb[],
-  turnNumber: number
+  turnNumber: number,
+  previousShadowKnightPositions: Position[] // New parameter
 ): Promise<{ newPositions: Position[], oldPositions: Position[] }> {
 
-  // If there are no shadow knights, return empty arrays
   if (shadowKnightPositions.length === 0) {
     return { newPositions: [], oldPositions: [] };
   }
@@ -21,14 +21,14 @@ export async function getShadowKnightMoves(
     const aiPositions = getOfflineShadowKnightMoves(
         whiteKnightPos,
         shadowKnightPositions,
-        board
+        board,
+        previousShadowKnightPositions // Pass it to the AI
     );
     
     return { newPositions: aiPositions, oldPositions: shadowKnightPositions };
 
   } catch (error) {
     console.error("Offline AI move generation failed, knights will skip their turn:", error);
-    // If the AI fails, the knights just stay in place. This prevents a crash and is a safe fallback.
     return { newPositions: shadowKnightPositions, oldPositions: shadowKnightPositions };
   }
 }

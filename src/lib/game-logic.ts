@@ -68,3 +68,7 @@ export const getRandomEmptySquare = (
   const randomIndex = Math.floor(Math.random() * emptySquares.length);
   return emptySquares[randomIndex];
 };
+
+export function deepCopy<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}

@@ -11,7 +11,7 @@ import {
   POINTS_PER_CAPTURE,
   SHADOW_KNIGHT_RESPAWN_DELAY,
 } from '@/lib/constants';
-import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves } from '@/lib/game-logic';
+import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves, deepCopy } from '@/lib/game-logic';
 import type {
   Position,
   GameStatus,
@@ -37,7 +37,8 @@ const createInitialBoard = (): BoardSquare[][] =>
 export default function KnightTrapGame() {
   const [board, setBoard] = useState<BoardSquare[][]>(createInitialBoard);
   const [whiteKnightPos, setWhiteKnightPos] = useState<Position>(WHITE_KNIGHT_START);
-  const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(SHADOW_KNIGHTS_START);
+  const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => deepCopy(SHADOW_KNIGHTS_START));
+  const [previousShadowKnightPositions, setPreviousShadowKnightPositions] = useState<Position[]>([]); // New state
   const [bombs, setBombs] = useState<Bomb[]>([]);
   const [explosions, setExplosions] = useState<Position[]>([]);
   const [explosionMarks, setExplosionMarks] = useState<ExplosionMarkType[]>([]);
@@ -61,7 +62,8 @@ export default function KnightTrapGame() {
   const resetGame = useCallback(() => {
     setBoard(createInitialBoard());
     setWhiteKnightPos(WHITE_KNIGHT_START);
-    setShadowKnights(JSON.parse(JSON.stringify(SHADOW_KNIGHTS_START)));
+    setShadowKnights(deepCopy(SHADOW_KNIGHTS_START));
+    setPreviousShadowKnightPositions([]); // Reset new state
     setBombs([]);
     setExplosions([]);
     setExplosionMarks([]);
@@ -89,18 +91,20 @@ export default function KnightTrapGame() {
 
   useEffect(() => {
     if (explosions.length > 0) {
-      const timer = setTimeout(() => setExplosions([]), 500); // Clear explosions after animation
+      const timer = setTimeout(() => setExplosions([]), 500);
       return () => clearTimeout(timer);
     }
   }, [explosions]);
 
   useEffect(() => {
     if (explosionMarks.length > 0) {
-      const markId = explosionMarks[explosionMarks.length - 1].id;
-      const timer = setTimeout(() => {
-        setExplosionMarks(prev => prev.filter(mark => mark.id !== markId));
-      }, 500);
-      return () => clearTimeout(timer);
+      const latestMark = explosionMarks[explosionMarks.length - 1];
+      if (latestMark) {
+        const timer = setTimeout(() => {
+          setExplosionMarks(prev => prev.filter(mark => mark.id !== latestMark.id));
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     }
   }, [explosionMarks]);
 
@@ -116,99 +120,111 @@ export default function KnightTrapGame() {
 
     if (!isMoveLegal(whiteKnightPos, newPos)) {
       setIllegalMovePos(newPos);
-      handleGameOver('illegalMove');
+      setTimeout(() => handleGameOver('illegalMove'), 500);
       return;
     }
-    
-    let updatedBombs = [...bombs];
-    const isMovingToBomb = updatedBombs.some(bomb => isSamePosition(bomb.position, newPos));
-    if (isMovingToBomb) {
-        setBombs(prevBombs => prevBombs.filter(b => !isSamePosition(b.position, newPos)));
-        triggerExplosion(newPos);
-        handleGameOver('bomb');
-        return;
-    }
-    
+
     const nextTurn = turn + 1;
-    setTurn(nextTurn);
-    
-    updatedBombs.push({ position: whiteKnightPos, placedBy: 'white', turnPlaced: turn });
+    let tempScore = score;
+    let tempMultiplier = multiplier;
+    let tempBombDuration = bombDuration;
+    let tempTotalCaptures = totalCaptures;
+    let tempShadowKnights = deepCopy(shadowKnights);
+    let tempBombs = deepCopy(bombs);
+
+    const landingOnBombIndex = tempBombs.findIndex((bomb: Bomb) => isSamePosition(bomb.position, newPos));
+    if (landingOnBombIndex > -1) {
+      setWhiteKnightPos(newPos);
+      triggerExplosion(newPos);
+      setBombs(bombs.filter((b: Bomb) => !isSamePosition(b.position, newPos)));
+      setTimeout(() => handleGameOver('bomb'), 500);
+      return;
+    }
+
+    tempBombs.push({ position: whiteKnightPos, placedBy: 'white', turnPlaced: turn });
     setWhiteKnightPos(newPos);
 
-    let currentScore = score;
-    let currentBombDuration = bombDuration;
-    let currentTotalCaptures = totalCaptures;
-    let tempShadowKnights = JSON.parse(JSON.stringify(shadowKnights)); 
-    
     const capturedKnightIndex = tempShadowKnights.findIndex(
       (k: ShadowKnight) => k.status === 'active' && isSamePosition(k.position, newPos)
     );
 
     if (capturedKnightIndex > -1) {
-      currentTotalCaptures++;
-      const newMultiplier = 1 + Math.floor(currentTotalCaptures / 2);
-      
-      currentScore += POINTS_PER_CAPTURE * multiplier;
-      setMultiplier(newMultiplier);
-      currentBombDuration++;
-      
-      toast({
-        title: `Shadow Knight Captured!`,
-        description: `Multiplier is now ${newMultiplier}x! Bomb duration is ${currentBombDuration}!`,
-      });
+      tempTotalCaptures++;
+      const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
+      tempScore += POINTS_PER_CAPTURE * tempMultiplier;
+      tempBombDuration++;
+
+      if (newMultiplier > tempMultiplier) {
+        toast({
+          title: `Shadow Knight Captured!`,
+          description: `Multiplier is now ${newMultiplier}x! Bomb duration is ${tempBombDuration}!`,
+        });
+        tempMultiplier = newMultiplier;
+      } else {
+        toast({
+          title: `Shadow Knight Captured!`,
+          description: `Bomb duration increased to ${tempBombDuration}!`,
+        });
+      }
       
       const knightToRespawn = tempShadowKnights[capturedKnightIndex];
-      triggerExplosion(knightToRespawn.position);
-      knightToRespawn.status = 'respawning';
-      knightToRespawn.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
+      if(knightToRespawn) {
+        triggerExplosion(knightToRespawn.position);
+        knightToRespawn.status = 'respawning';
+        knightToRespawn.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
+      }
     }
     
-    currentScore += POINTS_PER_MOVE * multiplier;
+    tempScore += POINTS_PER_MOVE * tempMultiplier;
 
     startAiTransition(async () => {
       const activeKnightsForAI = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
-      const oldShadowPositions = activeKnightsForAI.map(k => k.position);
+      const oldShadowPositions = activeKnightsForAI.map((k: ShadowKnight) => k.position);
       
       const { newPositions: aiPositions } = await getShadowKnightMoves(
         newPos, 
         oldShadowPositions, 
         board, 
-        updatedBombs, 
-        nextTurn
+        tempBombs, 
+        nextTurn,
+        previousShadowKnightPositions // Pass the new argument
       );
+      
+      // For the *next* turn, the AI needs to know where the knights were before this move.
+      setPreviousShadowKnightPositions(oldShadowPositions);
       
       const destroyedKnightOriginalPositions: Position[] = [];
 
-      aiPositions.forEach((newAiPos, index) => {
-        const knightId = activeKnightsForAI[index].id;
+      aiPositions.forEach((newAiPos: Position, index: number) => {
+        const knightId = activeKnightsForAI[index]?.id;
         const knightInState = tempShadowKnights.find((k: ShadowKnight) => k.id === knightId);
 
         if (knightInState) {
-          const isBomb = updatedBombs.some(bomb => isSamePosition(bomb.position, newAiPos));
+          const isBomb = tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, newAiPos));
           if (isBomb) {
-            updatedBombs = updatedBombs.filter(b => !isSamePosition(b.position, newAiPos));
+            tempBombs = tempBombs.filter((b: Bomb) => !isSamePosition(b.position, newAiPos));
             destroyedKnightOriginalPositions.push(knightInState.position);
             triggerExplosion(newAiPos);
             knightInState.status = 'respawning';
             knightInState.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
             
-            currentTotalCaptures++;
-            const newMultiplier = 1 + Math.floor(currentTotalCaptures / 2);
-            
-            if (newMultiplier > multiplier) {
-               toast({
+            tempTotalCaptures++;
+            const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
+            tempScore += POINTS_PER_CAPTURE * tempMultiplier;
+            tempBombDuration++;
+
+            if (newMultiplier > tempMultiplier) {
+              toast({
                 title: `A Shadow Knight fell into a trap!`,
                 description: `Multiplier up to ${newMultiplier}x! Bomb duration increased.`,
               });
-              setMultiplier(newMultiplier);
+              tempMultiplier = newMultiplier;
             } else {
-               toast({
+              toast({
                 title: `A Shadow Knight fell into a trap!`,
                 description: `Bomb duration increased.`,
               });
             }
-            currentScore += POINTS_PER_CAPTURE * multiplier;
-            currentBombDuration++;
 
           } else {
             knightInState.position = newAiPos;
@@ -216,24 +232,15 @@ export default function KnightTrapGame() {
         }
       });
       
-      oldShadowPositions.forEach(oldPos => {
+      oldShadowPositions.forEach((oldPos: Position) => {
         const wasDestroyedByBomb = destroyedKnightOriginalPositions.some(destroyedPos => isSamePosition(destroyedPos, oldPos));
-        
-        let wasCapturedByPlayer = false;
-        if (capturedKnightIndex > -1) {
-            const capturedKnightInfo = shadowKnights[capturedKnightIndex];
-            if (capturedKnightInfo && isSamePosition(capturedKnightInfo.position, oldPos)) {
-                wasCapturedByPlayer = true;
-            }
-        }
+        const capturedKnightInfo = shadowKnights[capturedKnightIndex];
+        const wasCapturedByPlayer = capturedKnightIndex > -1 && capturedKnightInfo && isSamePosition(capturedKnightInfo.position, oldPos);
 
         if (!wasDestroyedByBomb && !wasCapturedByPlayer) {
-            updatedBombs.push({ position: oldPos, placedBy: 'shadow', turnPlaced: turn });
+            tempBombs.push({ position: oldPos, placedBy: 'shadow', turnPlaced: turn });
         }
       });
-      
-      setScore(currentScore);
-      setTotalCaptures(currentTotalCaptures);
       
       tempShadowKnights.forEach((knight: ShadowKnight) => {
         if (knight.status === 'respawning' && knight.respawnTurn !== null && nextTurn >= knight.respawnTurn) {
@@ -247,17 +254,18 @@ export default function KnightTrapGame() {
         }
       });
       
-      const turnCutoff = nextTurn - currentBombDuration;
-      const finalBombs = updatedBombs.filter(b => b.turnPlaced >= turnCutoff);
-      setBombs(finalBombs);
-      
+      setScore(tempScore);
+      setTotalCaptures(tempTotalCaptures);
+      setMultiplier(tempMultiplier);
+      setBombDuration(tempBombDuration);
       setShadowKnights(tempShadowKnights);
-      setBombDuration(currentBombDuration);
+      const turnCutoff = nextTurn - tempBombDuration;
+      setBombs(tempBombs.filter((b: Bomb) => b.turnPlaced >= turnCutoff));
+      setTurn(nextTurn);
 
       const activeAfterRespawn = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
-      
       if (activeAfterRespawn.some((p: ShadowKnight) => isSamePosition(p.position, newPos))) {
-        handleGameOver('captured');
+        setTimeout(() => handleGameOver('captured'), 100); // Short delay to see the capture
         return;
       }
       
@@ -265,18 +273,12 @@ export default function KnightTrapGame() {
       const validPlayerMoves = getValidKnightMoves(newPos, board, finalAllPiecePositions);
 
       if (validPlayerMoves.length === 0) {
-        handleGameOver('trapped');
+        setTimeout(() => handleGameOver('trapped'), 100);
         return;
       }
 
-      // Check if all valid moves are onto bombs
-      if (validPlayerMoves.length > 0) {
-        const areAllMovesIntoBombs = validPlayerMoves.every(move => 
-          finalBombs.some(bomb => isSamePosition(bomb.position, move))
-        );
-        if (areAllMovesIntoBombs) {
-          handleGameOver('trapped');
-        }
+      if (validPlayerMoves.every(move => tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, move)))) {
+        setTimeout(() => handleGameOver('trapped'), 100);
       }
     });
   };
