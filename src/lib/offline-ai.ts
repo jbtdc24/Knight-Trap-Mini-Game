@@ -9,7 +9,7 @@ export const getOfflineShadowKnightMoves = (
     whiteKnightPos: Position,
     shadowKnightPositions: Position[],
     board: BoardSquare[][],
-    previousShadowKnightPositions: Position[] // New parameter
+    previousShadowKnightPositions: Position[]
 ): Position[] => {
     if (shadowKnightPositions.length === 0) {
         return [];
@@ -19,20 +19,22 @@ export const getOfflineShadowKnightMoves = (
 
     shadowKnightPositions.forEach((knightPos, index) => {
         const otherKnightCurrentPos = finalMoves.length > 0 ? finalMoves[0] : (shadowKnightPositions.length > 1 ? shadowKnightPositions[1] : null);
-        const occupiedForThisKnight = [whiteKnightPos, ...shadowKnightPositions.filter(p => !isSamePosition(p, knightPos)), ...finalMoves];
+        // The white knight position is NOT an occupied square for the purpose of move calculation
+        const occupiedForThisKnight = [...shadowKnightPositions.filter(p => !isSamePosition(p, knightPos)), ...finalMoves];
 
         let possibleMoves = getValidKnightMoves(knightPos, board, occupiedForThisKnight);
 
-        // --- The New Logic: Avoid Previous Position ---
-        const previousPos = previousShadowKnightPositions[index];
-        if (previousPos) {
-            possibleMoves = possibleMoves.filter(move => !isSamePosition(move, previousPos));
-        }
-
+        // --- Priority #1: Capture the White Knight ---
         const captureMove = possibleMoves.find(move => isSamePosition(move, whiteKnightPos));
         if (captureMove) {
             finalMoves.push(captureMove);
             return; // Next knight
+        }
+
+        // --- Priority #2: Avoid Previous Position (if no capture is possible) ---
+        const previousPos = previousShadowKnightPositions[index];
+        if (previousPos) {
+            possibleMoves = possibleMoves.filter(move => !isSamePosition(move, previousPos));
         }
 
         if (possibleMoves.length === 0) {
@@ -40,6 +42,7 @@ export const getOfflineShadowKnightMoves = (
             return; // Next knight
         }
 
+        // --- Priority #3: Find the best move otherwise ---
         const scoredMoves = possibleMoves.map(move => {
             const distanceToWhite = getDistance(move, whiteKnightPos);
             const distanceToOther = otherKnightCurrentPos ? getDistance(move, otherKnightCurrentPos) : 0;
@@ -54,7 +57,6 @@ export const getOfflineShadowKnightMoves = (
 
     // Final check to prevent knights from landing on the same square
     if (finalMoves.length > 1 && isSamePosition(finalMoves[0], finalMoves[1])) {
-        // The second knight (if it was the one to move into the same square) will stay put.
         finalMoves[1] = shadowKnightPositions[1];
     }
     
