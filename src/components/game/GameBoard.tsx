@@ -36,12 +36,12 @@ type GameBoardProps = {
 };
 
 const getLMoveAnimation = (from: Position | undefined, to: Position) => {
-  if (!from) {
+  if (!from || (to && isSamePosition(from, to))) {
+    const y = to ? `${to[0] * 100}%` : (from ? `${from[0] * 100}%` : '0%');
+    const x = to ? `${to[1] * 100}%` : (from ? `${from[1] * 100}%` : '0%');
     return {
-      y: `${to[0] * 100}%`,
-      x: `${to[1] * 100}%`,
-      scale: 1,
-      zIndex: 1,
+      y,
+      x,
       transition: { duration: 0 },
     };
   }
@@ -51,30 +51,23 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   const toY = `${to[0] * 100}%`;
   const toX = `${to[1] * 100}%`;
 
-  const dy = to[0] - from[0];
+  // No arc, direct movement
+
+  // Overshoot calculation
   const dx = to[1] - from[1];
+  const dy = to[0] - from[0];
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const overshootAmount = dist > 0 ? 0.2 : 0; // 20% overshoot
+  const normDx = dist > 0 ? dx / dist : 0;
+  const normDy = dist > 0 ? dy / dist : 0;
+  const overshootX = `${(to[1] + normDx * overshootAmount) * 100}%`;
+  const overshootY = `${(to[0] + normDy * overshootAmount) * 100}%`;
 
-  const jumpAnimation = {
-    scale: [1, 1.3, 1],
-    zIndex: [1, 10, 1], // This will make the piece jump "over" others
+  return {
+    y: [fromY, overshootY, toY],
+    x: [fromX, overshootX, toX],
+    zIndex: 10,
   };
-
-  // Prefer moving vertically first if the vertical distance is greater
-  if (Math.abs(dy) > Math.abs(dx)) {
-     return {
-      y: [fromY, toY, toY],
-      x: [fromX, fromX, toX],
-      ...jumpAnimation,
-    };
-  } 
-  // Otherwise, move horizontally first
-  else {
-    return {
-      y: [fromY, fromY, toY],
-      x: [fromX, toX, toX],
-      ...jumpAnimation,
-    };
-  }
 };
 
 
@@ -191,7 +184,7 @@ const GameBoard = ({
             className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
             initial={false}
             animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
-            transition={{ duration: 0.3, ease: 'easeInOut', times: [0, 0.5, 1] }}
+            transition={{ duration: 0.1, ease: "circOut", times: [0, 0.7, 1] }}
         >
             <KnightIcon />
         </motion.div>
@@ -208,7 +201,7 @@ const GameBoard = ({
                 className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
                 initial={false}
                 animate={getLMoveAnimation(oldPos, knight.position)}
-                transition={{ duration: 0.8, ease: "easeInOut", times: [0, 0.5, 1] }}
+                transition={{ duration: 0.1, ease: "circOut", times: [0, 0.7, 1] }}
             >
                 <ShadowKnightIcon />
             </motion.div>
