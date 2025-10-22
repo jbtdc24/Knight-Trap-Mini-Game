@@ -1,5 +1,5 @@
 import { getValidKnightMoves, isSamePosition } from './game-logic';
-import type { BoardSquare, Position, ShadowKnight } from './types';
+import type { BoardSquare, Position, Bomb } from './types';
 
 const getDistance = (pos1: Position, pos2: Position): number => {
     return Math.abs(pos1[0] - pos2[0]) + Math.abs(pos1[1] - pos2[1]);
@@ -9,7 +9,9 @@ export const getOfflineShadowKnightMoves = (
     whiteKnightPos: Position,
     shadowKnightPositions: Position[],
     board: BoardSquare[][],
-    previousShadowKnightPositions: Position[]
+    bombs: Bomb[],
+    turn: number,
+    previousShadowKnightPositions: Position[],
 ): Position[] => {
     if (shadowKnightPositions.length === 0) {
         return [];
@@ -19,7 +21,6 @@ export const getOfflineShadowKnightMoves = (
 
     shadowKnightPositions.forEach((knightPos, index) => {
         const otherKnightCurrentPos = finalMoves.length > 0 ? finalMoves[0] : (shadowKnightPositions.length > 1 ? shadowKnightPositions[1] : null);
-        // The white knight position is NOT an occupied square for the purpose of move calculation
         const occupiedForThisKnight = [...shadowKnightPositions.filter(p => !isSamePosition(p, knightPos)), ...finalMoves];
 
         let possibleMoves = getValidKnightMoves(knightPos, board, occupiedForThisKnight);
@@ -30,6 +31,9 @@ export const getOfflineShadowKnightMoves = (
             finalMoves.push(captureMove);
             return; // Next knight
         }
+        
+        // Do not move into a bomb
+        possibleMoves = possibleMoves.filter(move => !bombs.some(b => isSamePosition(b.position, move)));
 
         // --- Priority #2: Avoid Previous Position (if no capture is possible) ---
         const previousPos = previousShadowKnightPositions[index];
