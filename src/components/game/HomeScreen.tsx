@@ -4,7 +4,10 @@ import { Play } from 'lucide-react';
 
 export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void }) {
   return (
-    <div className="relative flex h-screen w-screen flex-col items-center justify-center bg-gray-800">
+    <div 
+      className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
+      style={{ backgroundImage: "url('/home-background.png')" }}
+    >
       <div className="absolute top-4 left-4 flex items-center gap-2">
         <span className="font-bold text-white">HIGH SCORE</span>
         <span className="text-2xl font-bold text-white">0</span>

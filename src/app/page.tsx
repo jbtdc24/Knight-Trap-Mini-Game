@@ -15,9 +15,5 @@ export default function Home() {
     );
   }
 
-  return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center p-2 sm:p-4 lg:p-8">
-      <HomeScreen onPlayClick={() => setGameStarted(true)} />
-    </main>
-  );
+  return <HomeScreen onPlayClick={() => setGameStarted(true)} />;
 }

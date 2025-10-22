@@ -67,7 +67,7 @@ export default function KnightTrapGame() {
     setBombDuration(INITIAL_BOMB_DURATION);
     setTotalCaptures(0);
     setMultiplier(1);
-    setGameStatus('starting');
+    setGameStatus('playing');
   }, []);
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 export default function StartingBattleOverlay() {
   return (
     <motion.div
-      className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-20 flex items-center justify-center bg-gradient-to-b from-[#B54B2A] to-[#5B3A2C]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
