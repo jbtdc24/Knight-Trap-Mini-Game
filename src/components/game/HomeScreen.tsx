@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons/Logo';
 import { Play } from 'lucide-react';
 
-export default function HomeScreen() {{
+export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void }) {
   return (
     <div className="relative flex h-screen w-screen flex-col items-center justify-center bg-gray-800">
       <div className="absolute top-4 left-4 flex items-center gap-2">
@@ -16,7 +16,7 @@ export default function HomeScreen() {{
 
       <div className="flex flex-col items-center gap-8">
         <Logo />
-        <Button size="lg" className="font-headline text-xl">
+        <Button size="lg" className="font-headline text-xl" onClick={onPlayClick}>
           <Play className="mr-2" />
           PLAY
         </Button>
@@ -44,4 +44,4 @@ export default function HomeScreen() {{
       </div>
     </div>
   );
-}}
+}
