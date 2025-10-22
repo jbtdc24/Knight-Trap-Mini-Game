@@ -31,9 +31,6 @@ export const getOfflineShadowKnightMoves = (
             finalMoves.push(captureMove);
             return; // Next knight
         }
-        
-        // Do not move into a bomb
-        possibleMoves = possibleMoves.filter(move => !bombs.some(b => isSamePosition(b.position, move)));
 
         // --- Priority #2: Avoid Previous Position (if no capture is possible) ---
         const previousPos = previousShadowKnightPositions[index];
