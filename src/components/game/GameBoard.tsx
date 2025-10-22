@@ -199,7 +199,7 @@ const GameBoard = ({
                 className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
                 initial={false}
                 animate={getLMoveAnimation(oldPos, knight.position)}
-                transition={{ duration: 0.9, times: [0, 0.5, 1], ease: "easeInOut" }}
+                transition={{ duration: 0.9, ease: "easeInOut" }}
             >
                 <ShadowKnightIcon />
             </motion.div>

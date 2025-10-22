@@ -265,7 +265,7 @@ export default function KnightTrapGame() {
 
       const activeAfterRespawn = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
       if (activeAfterRespawn.some((p: ShadowKnight) => isSamePosition(p.position, newPos))) {
-        setTimeout(() => handleGameOver('captured'), 100); // Short delay to see the capture
+        setTimeout(() => handleGameOver('captured'), 1000); // Short delay to see the capture
         return;
       }
       
@@ -273,12 +273,12 @@ export default function KnightTrapGame() {
       const validPlayerMoves = getValidKnightMoves(newPos, board, finalAllPiecePositions);
 
       if (validPlayerMoves.length === 0) {
-        setTimeout(() => handleGameOver('trapped'), 100);
+        setTimeout(() => handleGameOver('trapped'), 1000);
         return;
       }
 
       if (validPlayerMoves.every(move => tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, move)))) {
-        setTimeout(() => handleGameOver('trapped'), 100);
+        setTimeout(() => handleGameOver('trapped'), 1000);
       }
     });
   };
