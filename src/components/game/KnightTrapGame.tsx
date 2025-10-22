@@ -245,7 +245,7 @@ export default function KnightTrapGame() {
       tempShadowKnights.forEach((knight: ShadowKnight) => {
         if (knight.status === 'respawning' && knight.respawnTurn !== null && nextTurn >= knight.respawnTurn) {
           const occupiedForRespawn = [newPos, ...tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active').map((k: ShadowKnight) => k.position)];
-          const respawnSquare = getRandomEmptySquare(board, occupiedForRespawn);
+          const respawnSquare = getRandomEmptySquare(board, occupiedForRespawn, tempBombs);
           if (respawnSquare) {
             knight.position = respawnSquare;
             knight.status = 'active';
