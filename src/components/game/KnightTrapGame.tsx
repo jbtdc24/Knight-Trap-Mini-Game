@@ -298,12 +298,15 @@ export default function KnightTrapGame() {
   }
 
   return (
-    <div className="flex w-full max-w-7xl flex-col items-center justify-center gap-8">
-      <GameTopBar 
-        score={score} 
-        multiplier={multiplier} 
-        bombDuration={bombDuration}
-      />
+    <div className="flex w-full max-w-7xl flex-col items-center justify-center gap-4">
+      <div className="w-full max-w-[560px]">
+        <GameTopBar 
+          score={score} 
+          multiplier={multiplier} 
+          bombDuration={bombDuration}
+          totalCaptures={totalCaptures}
+        />
+      </div>
       <GameBoard
         board={board}
         whiteKnightPos={whiteKnightPos}
