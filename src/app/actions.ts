@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server';
 
-import type { Bomb, BoardSquare, Position } from '@/lib/types';
+import type { BoardSquare, Position, Bomb } from '@/lib/types';
 import { getOfflineShadowKnightMoves } from '@/lib/offline-ai';
 
 export async function getShadowKnightMoves(
@@ -9,8 +9,8 @@ export async function getShadowKnightMoves(
   shadowKnightPositions: Position[],
   board: BoardSquare[][],
   bombs: Bomb[],
-  turnNumber: number,
-  previousShadowKnightPositions: Position[] // New parameter
+  turn: number,
+  previousShadowKnightPositions: Position[],
 ): Promise<{ newPositions: Position[], oldPositions: Position[] }> {
 
   if (shadowKnightPositions.length === 0) {
@@ -22,7 +22,9 @@ export async function getShadowKnightMoves(
         whiteKnightPos,
         shadowKnightPositions,
         board,
-        previousShadowKnightPositions // Pass it to the AI
+        bombs,
+        turn,
+        previousShadowKnightPositions,
     );
     
     return { newPositions: aiPositions, oldPositions: shadowKnightPositions };

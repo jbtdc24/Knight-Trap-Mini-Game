@@ -40,6 +40,8 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
     return {
       y: `${to[0] * 100}%`,
       x: `${to[1] * 100}%`,
+      scale: 1,
+      zIndex: 1,
       transition: { duration: 0 },
     };
   }
@@ -52,11 +54,17 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   const dy = to[0] - from[0];
   const dx = to[1] - from[1];
 
+  const jumpAnimation = {
+    scale: [1, 1.3, 1],
+    zIndex: [1, 10, 1], // This will make the piece jump "over" others
+  };
+
   // Prefer moving vertically first if the vertical distance is greater
   if (Math.abs(dy) > Math.abs(dx)) {
      return {
       y: [fromY, toY, toY],
       x: [fromX, fromX, toX],
+      ...jumpAnimation,
     };
   } 
   // Otherwise, move horizontally first
@@ -64,6 +72,7 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
     return {
       y: [fromY, fromY, toY],
       x: [fromX, toX, toX],
+      ...jumpAnimation,
     };
   }
 };
@@ -182,7 +191,7 @@ const GameBoard = ({
             className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
             initial={false}
             animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
-            transition={{ duration: 0.2, ease: 'linear' }}
+            transition={{ duration: 0.3, ease: 'easeInOut', times: [0, 0.5, 1] }}
         >
             <KnightIcon />
         </motion.div>
@@ -199,7 +208,7 @@ const GameBoard = ({
                 className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
                 initial={false}
                 animate={getLMoveAnimation(oldPos, knight.position)}
-                transition={{ duration: 0.9, times: [0, 0.5, 1], ease: "easeInOut" }}
+                transition={{ duration: 0.8, ease: "easeInOut", times: [0, 0.5, 1] }}
             >
                 <ShadowKnightIcon />
             </motion.div>
