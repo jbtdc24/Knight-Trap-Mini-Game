@@ -88,8 +88,16 @@ const GameBoard = ({
 
   const getSquareStyle = (row: number, col: number) => {
     return (row + col) % 2 === 0
-      ? 'bg-background'
-      : 'bg-muted';
+      ? { 
+          backgroundImage: "url('/White-tile.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }
+      : { 
+          backgroundImage: "url('/Black-tile.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        };
   };
   
   const shakeVariants = {
@@ -122,10 +130,8 @@ const GameBoard = ({
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                className={cn(
-                  'relative flex items-center justify-center',
-                  getSquareStyle(rowIndex, colIndex)
-                )}
+                className={'relative flex items-center justify-center'}
+                style={getSquareStyle(rowIndex, colIndex)}
               >
                  <AnimatePresence>
                   {isIllegal && (
@@ -155,7 +161,22 @@ const GameBoard = ({
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       className="absolute inset-0 flex items-center justify-center pointer-events-none"
                     >
-                      <img src="/bomb.png" alt="Bomb" />
+                      <motion.img 
+                        src="/Bomb.png" 
+                        alt="Bomb"
+                        animate={{
+                          filter: [
+                            'drop-shadow(0 0 2px #F87171)', 
+                            'drop-shadow(0 0 10px #EF4444)', 
+                            'drop-shadow(0 0 2px #F87171)'
+                          ],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                      />
                     </motion.div>
                   )}
                   {isExplosionMark && (
