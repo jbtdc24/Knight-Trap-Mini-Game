@@ -5,10 +5,8 @@ import { cn } from '@/lib/utils';
 import type { BoardSquare, Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType } from '@/lib/types';
 import { KnightIcon } from '../icons/KnightIcon';
 import { ShadowKnightIcon } from '../icons/ShadowKnightIcon';
-import { BombIcon } from '../icons/BombIcon';
 import { Explosion } from '../icons/Explosion';
 import { useEffect, useRef } from 'react';
-import { ExplosionMark } from '../icons/ExplosionMark';
 import { isSamePosition } from '@/lib/game-logic';
 
 // Custom hook to get the previous value of a prop or state
@@ -157,7 +155,7 @@ const GameBoard = ({
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       className="absolute inset-0 flex items-center justify-center pointer-events-none"
                     >
-                      <BombIcon />
+                      <img src="/bomb.png" alt="Bomb" />
                     </motion.div>
                   )}
                   {isExplosionMark && (
@@ -166,9 +164,9 @@ const GameBoard = ({
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 0.7, scale: 1, transition: { duration: 0.2 } }}
                       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.5, ease: 'easeOut' } }}
-                      className="absolute inset-0 z-0"
+                      className="absolute inset-0 z-0 flex items-center justify-center"
                     >
-                      <ExplosionMark />
+                      <img src="/explosion-mark.png" alt="Explosion Mark" />
                     </motion.div>
                   )}
                 </AnimatePresence>
