@@ -290,7 +290,10 @@ export default function KnightTrapGame() {
   const activeShadowKnights = shadowKnights.filter(k => k.status === 'active');
 
   return (
-    <div className="relative flex w-full max-w-7xl flex-col items-center justify-center gap-4">
+    <div 
+      className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
+      style={{ backgroundImage: "url('/Ingamebackground.png')" }}
+    >
       <AnimatePresence>
         {gameStatus === 'starting' && <StartingBattleOverlay />}
       </AnimatePresence>
