@@ -85,20 +85,6 @@ const GameBoard = ({
 
   const prevWhiteKnightPos = usePrevious(whiteKnightPos);
   const prevShadowKnights = usePrevious(shadowKnights);
-
-  const getSquareStyle = (row: number, col: number) => {
-    return (row + col) % 2 === 0
-      ? { 
-          backgroundImage: "url('/White-tile.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }
-      : { 
-          backgroundImage: "url('/Black-tile.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        };
-  };
   
   const shakeVariants = {
     shake: {
@@ -119,6 +105,7 @@ const GameBoard = ({
       variants={shakeVariants}
       initial="initial"
       animate={boardShake > 0 ? "shake" : "initial"}
+      style={{ backgroundImage: 'url(/Board.png)', backgroundSize: 'cover' }}
     >
       <AnimatePresence>
         {board.map((row, rowIndex) =>
@@ -131,7 +118,6 @@ const GameBoard = ({
               <div
                 key={`${rowIndex}-${colIndex}`}
                 className={'relative flex items-center justify-center'}
-                style={getSquareStyle(rowIndex, colIndex)}
               >
                  <AnimatePresence>
                   {isIllegal && (
