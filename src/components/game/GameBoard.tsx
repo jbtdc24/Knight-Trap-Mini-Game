@@ -164,7 +164,9 @@ const GameBoard = ({
           animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
           transition={{ duration: 0.1, ease: 'circOut', times: [0, 0.7, 1] }}
         >
-          <KnightIcon />
+          <motion.div className="h-full w-full" animate={{ scale: 1.5 }}>
+            <KnightIcon />
+          </motion.div>
         </motion.div>
       </AnimatePresence>
 
@@ -181,7 +183,9 @@ const GameBoard = ({
               animate={getLMoveAnimation(oldPos, knight.position)}
               transition={{ duration: 0.1, ease: 'circOut', times: [0, 0.7, 1] }}
             >
-              <ShadowKnightIcon />
+              <motion.div className="h-full w-full" animate={{ scale: 1.5 }}>
+                <ShadowKnightIcon />
+              </motion.div>
             </motion.div>
           );
         })}
@@ -191,8 +195,11 @@ const GameBoard = ({
         {explosions.map((pos, index) => (
           <motion.div
             key={`explosion-${pos[0]}-${pos[1]}-${index}`}
-            className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
-            style={{ x: `${pos[1] * 100}%`, y: `${pos[0] * 100}%` }}
+            className="pointer-events-none absolute h-[12.5%] w-[12.5%] z-20"
+            style={{ 
+              x: `${pos[1] * 100}%`,
+              y: `${pos[0] * 100}%`,
+            }}
           >
             <Explosion />
           </motion.div>
