@@ -7,13 +7,12 @@ import HomeScreen from '@/components/game/HomeScreen';
 export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
 
+  const handleGameStart = () => setGameStarted(true);
+  const handleReturnToHome = () => setGameStarted(false);
+
   if (gameStarted) {
-    return (
-      <main className="flex min-h-screen w-full flex-col items-center justify-center p-2 sm:p-4 lg:p-8">
-        <KnightTrapGame />
-      </main>
-    );
+    return <KnightTrapGame onReturnToHome={handleReturnToHome} />;
   }
 
-  return <HomeScreen onPlayClick={() => setGameStarted(true)} />;
+  return <HomeScreen onPlayClick={handleGameStart} />;
 }

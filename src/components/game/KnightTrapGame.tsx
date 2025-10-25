@@ -33,7 +33,7 @@ const createInitialBoard = (): BoardSquare[][] =>
     .fill(null)
     .map(() => Array(BOARD_SIZE).fill({ type: 'empty' }));
 
-export default function KnightTrapGame() {
+export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () => void }) {
   const [board, setBoard] = useState<BoardSquare[][]>(createInitialBoard);
   const [whiteKnightPos, setWhiteKnightPos] = useState<Position>(WHITE_KNIGHT_START);
   const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => deepCopy(SHADOW_KNIGHTS_START));
@@ -324,6 +324,7 @@ export default function KnightTrapGame() {
         score={score}
         reason={gameOverReason}
         onRestart={resetGame}
+        onReturnToHome={onReturnToHome}
       />
     </div>
   );
