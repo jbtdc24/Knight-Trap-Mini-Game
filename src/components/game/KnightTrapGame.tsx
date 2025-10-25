@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { getShadowKnightMoves } from '@/app/actions';
 import {
   BOARD_SIZE,
@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import StartingBattleOverlay from './StartingBattleOverlay';
 import { AnimatePresence } from 'framer-motion';
 import { useSfx, SoundEvent } from '@/hooks/use-sfx';
+import { useAudio } from '@/context/AudioContext';
 
 const createInitialBoard = (): BoardSquare[][] =>
   Array(BOARD_SIZE)
@@ -54,6 +55,21 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const [boardShake, setBoardShake] = useState(0);
   const [illegalMovePos, setIllegalMovePos] = useState<Position | null>(null);
   const playSound = useSfx();
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const { musicVolume } = useAudio();
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.loop = true;
+      audio.volume = musicVolume;
+      if (gameStatus === 'playing') {
+        audio.play().catch(e => console.error("Audio play failed:", e));
+      } else {
+        audio.pause();
+      }
+    }
+  }, [gameStatus, musicVolume]);
 
   const resetGame = useCallback(() => {
     setBoard(createInitialBoard());
@@ -83,13 +99,17 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       return () => clearTimeout(timer);
     }
   }, [gameStatus, playSound]);
-  
-  const triggerExplosion = useCallback((pos: Position) => {
-    playSound('explosion');
+
+  const triggerVisualExplosion = useCallback((pos: Position) => {
     setExplosions(prev => [...prev, pos]);
     setExplosionMarks(prev => [...prev, { position: pos, id: Date.now() }]);
     setBoardShake(prev => prev + 1);
-  }, [playSound]);
+  }, []);
+  
+  const triggerExplosion = useCallback((pos: Position) => {
+    playSound('explosion');
+    triggerVisualExplosion(pos);
+  }, [playSound, triggerVisualExplosion]);
 
   useEffect(() => {
     if (illegalMovePos) {
@@ -119,7 +139,9 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
   const handleGameOver = useCallback((reason: GameOverReason) => {
     if (gameStatus === 'playing') {
-      playSound('gameOver');
+      if (reason !== 'bomb') {
+        playSound('gameOver');
+      }
       setGameStatus('lost');
       setGameOverReason(reason);
     }
@@ -183,7 +205,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       
       const knightToRespawn = tempShadowKnights[capturedKnightIndex];
       if(knightToRespawn) {
-        triggerExplosion(knightToRespawn.position);
+        triggerVisualExplosion(knightToRespawn.position);
         knightToRespawn.status = 'respawning';
         knightToRespawn.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
       }
@@ -204,6 +226,10 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         previousShadowKnightPositions // Pass the new argument
       );
       
+      if (aiPositions.length > 0 && activeKnightsForAI.length > 0) {
+        playSound('shadowMove');
+      }
+
       // For the *next* turn, the AI needs to know where the knights were before this move.
       setPreviousShadowKnightPositions(oldShadowPositions);
       
@@ -305,6 +331,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
       style={{ backgroundImage: "url('/Ingamebackground.png')" }}
     >
+      <audio ref={audioRef} src="/sfx/Ingame.MP3" preload="auto"></audio>
       <AnimatePresence>
         {gameStatus === 'starting' && <StartingBattleOverlay />}
       </AnimatePresence>
