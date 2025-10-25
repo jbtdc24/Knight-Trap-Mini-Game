@@ -12,8 +12,8 @@ type AudioContextType = {
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export function AudioProvider({ children }: { children: ReactNode }) {
-  const [musicVolume, setMusicVolume] = useState(1);
-  const [sfxVolume, setSfxVolume] = useState(1);
+  const [musicVolume, setMusicVolume] = useState(0.5);
+  const [sfxVolume, setSfxVolume] = useState(0.5);
 
   return (
     <AudioContext.Provider value={{ musicVolume, sfxVolume, setMusicVolume, setSfxVolume }}>
