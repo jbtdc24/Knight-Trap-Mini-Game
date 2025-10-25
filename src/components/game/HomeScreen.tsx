@@ -22,12 +22,12 @@ export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void })
              className="cursor-pointer h-20 sm:h-24 md:h-28 transition-transform hover:scale-105"
              onClick={onPlayClick} 
            />
-            <button 
+            <img 
+              src="/howto.png" 
+              alt="How to Play"
+              className="cursor-pointer h-12 sm:h-16 transition-transform hover:scale-105"
               onClick={() => setShowHowToPlay(true)}
-              className="text-white text-lg sm:text-xl md:text-2xl font-bold bg-black bg-opacity-50 px-6 py-2 rounded-lg transition-colors hover:bg-opacity-75"
-            >
-              How to Play
-            </button>
+            />
           </div>
         </div>
       </div>
