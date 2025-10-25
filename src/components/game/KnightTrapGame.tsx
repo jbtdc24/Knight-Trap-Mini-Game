@@ -27,6 +27,7 @@ import GameOverDialog from './GameOverDialog';
 import { useToast } from '@/hooks/use-toast';
 import StartingBattleOverlay from './StartingBattleOverlay';
 import { AnimatePresence } from 'framer-motion';
+import { useSfx, SoundEvent } from '@/hooks/use-sfx';
 
 const createInitialBoard = (): BoardSquare[][] =>
   Array(BOARD_SIZE)
@@ -52,6 +53,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const { toast } = useToast();
   const [boardShake, setBoardShake] = useState(0);
   const [illegalMovePos, setIllegalMovePos] = useState<Position | null>(null);
+  const playSound = useSfx();
 
   const resetGame = useCallback(() => {
     setBoard(createInitialBoard());
@@ -67,24 +69,27 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     setBombDuration(INITIAL_BOMB_DURATION);
     setTotalCaptures(0);
     setMultiplier(1);
+    playSound('startGame');
     setGameStatus('playing');
-  }, []);
+  }, [playSound]);
 
   useEffect(() => {
     if (gameStatus === 'starting') {
       const timer = setTimeout(() => {
+        playSound('startGame');
         setGameStatus('playing');
       }, 2000); // Show for 2 seconds
 
       return () => clearTimeout(timer);
     }
-  }, [gameStatus]);
+  }, [gameStatus, playSound]);
   
-  const triggerExplosion = (pos: Position) => {
+  const triggerExplosion = useCallback((pos: Position) => {
+    playSound('explosion');
     setExplosions(prev => [...prev, pos]);
     setExplosionMarks(prev => [...prev, { position: pos, id: Date.now() }]);
     setBoardShake(prev => prev + 1);
-  }
+  }, [playSound]);
 
   useEffect(() => {
     if (illegalMovePos) {
@@ -114,20 +119,23 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
   const handleGameOver = useCallback((reason: GameOverReason) => {
     if (gameStatus === 'playing') {
+      playSound('gameOver');
       setGameStatus('lost');
       setGameOverReason(reason);
     }
-  }, [gameStatus]);
+  }, [gameStatus, playSound]);
 
   const handlePlayerMove = (newPos: Position) => {
     if (gameStatus !== 'playing' || isAiThinking) return;
 
     if (!isMoveLegal(whiteKnightPos, newPos)) {
       setIllegalMovePos(newPos);
+      playSound('illegalMove');
       setTimeout(() => handleGameOver('illegalMove'), 500);
       return;
     }
 
+    playSound('move');
     const nextTurn = turn + 1;
     let tempScore = score;
     let tempMultiplier = multiplier;
@@ -153,12 +161,14 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     );
 
     if (capturedKnightIndex > -1) {
+      playSound('capture');
       tempTotalCaptures++;
       const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
       tempScore += POINTS_PER_CAPTURE * tempMultiplier;
       tempBombDuration++;
 
       if (newMultiplier > tempMultiplier) {
+        playSound('levelUp');
         toast({
           title: `Shadow Knight Captured!`,
           description: `Multiplier is now ${newMultiplier}x! Bomb duration is ${tempBombDuration}!`,
@@ -218,6 +228,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
             tempBombDuration++;
 
             if (newMultiplier > tempMultiplier) {
+              playSound('levelUp');
               toast({
                 title: `A Shadow Knight fell into a trap!`,
                 description: `Multiplier up to ${newMultiplier}x! Bomb duration increased.`,
