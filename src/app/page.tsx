@@ -3,17 +3,22 @@
 import { useState } from 'react';
 import KnightTrapGame from '@/components/game/KnightTrapGame';
 import HomeScreen from '@/components/game/HomeScreen';
+import VolumeControl from '@/components/game/VolumeControl';
 
 export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
 
-  if (gameStarted) {
-    return (
-      <main className="flex min-h-screen w-full flex-col items-center justify-center p-2 sm:p-4 lg:p-8">
-        <KnightTrapGame />
-      </main>
-    );
-  }
+  const handleGameStart = () => setGameStarted(true);
+  const handleReturnToHome = () => setGameStarted(false);
 
-  return <HomeScreen onPlayClick={() => setGameStarted(true)} />;
+  return (
+    <main>
+      <VolumeControl />
+      {gameStarted ? (
+        <KnightTrapGame onReturnToHome={handleReturnToHome} />
+      ) : (
+        <HomeScreen onPlayClick={handleGameStart} />
+      )}
+    </main>
+  );
 }
