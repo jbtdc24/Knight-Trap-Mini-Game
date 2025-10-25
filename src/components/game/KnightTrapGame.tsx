@@ -25,9 +25,8 @@ import GameBoard from './GameBoard';
 import GameTopBar from './GameTopBar';
 import GameOverDialog from './GameOverDialog';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '../ui/button';
-import { Play } from 'lucide-react';
-import { Logo } from '../icons/Logo';
+import StartingBattleOverlay from './StartingBattleOverlay';
+import { AnimatePresence } from 'framer-motion';
 
 const createInitialBoard = (): BoardSquare[][] =>
   Array(BOARD_SIZE)
@@ -44,7 +43,7 @@ export default function KnightTrapGame() {
   const [explosionMarks, setExplosionMarks] = useState<ExplosionMarkType[]>([]);
   const [score, setScore] = useState(0);
   const [turn, setTurn] = useState(0);
-  const [gameStatus, setGameStatus] = useState<GameStatus>('pre-game');
+  const [gameStatus, setGameStatus] = useState<GameStatus>('starting');
   const [gameOverReason, setGameOverReason] = useState<GameOverReason>(null);
   const [bombDuration, setBombDuration] = useState(INITIAL_BOMB_DURATION);
   const [totalCaptures, setTotalCaptures] = useState(0);
@@ -53,11 +52,6 @@ export default function KnightTrapGame() {
   const { toast } = useToast();
   const [boardShake, setBoardShake] = useState(0);
   const [illegalMovePos, setIllegalMovePos] = useState<Position | null>(null);
-
-  const startGame = () => {
-    resetGame();
-    setGameStatus('playing');
-  };
 
   const resetGame = useCallback(() => {
     setBoard(createInitialBoard());
@@ -69,12 +63,22 @@ export default function KnightTrapGame() {
     setExplosionMarks([]);
     setScore(0);
     setTurn(0);
-    setGameStatus('pre-game');
     setGameOverReason(null);
     setBombDuration(INITIAL_BOMB_DURATION);
     setTotalCaptures(0);
     setMultiplier(1);
+    setGameStatus('playing');
   }, []);
+
+  useEffect(() => {
+    if (gameStatus === 'starting') {
+      const timer = setTimeout(() => {
+        setGameStatus('playing');
+      }, 2000); // Show for 2 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameStatus]);
   
   const triggerExplosion = (pos: Position) => {
     setExplosions(prev => [...prev, pos]);
@@ -285,20 +289,14 @@ export default function KnightTrapGame() {
   
   const activeShadowKnights = shadowKnights.filter(k => k.status === 'active');
 
-  if (gameStatus === 'pre-game') {
-    return (
-      <div className="flex flex-col items-center justify-center gap-8 text-center">
-        <Logo />
-        <Button onClick={startGame} size="lg" className="font-headline text-xl">
-            <Play className="mr-2" />
-            Start Game
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex w-full max-w-7xl flex-col items-center justify-center gap-4">
+    <div 
+      className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
+      style={{ backgroundImage: "url('/Ingamebackground.png')" }}
+    >
+      <AnimatePresence>
+        {gameStatus === 'starting' && <StartingBattleOverlay />}
+      </AnimatePresence>
       <div className="w-full max-w-[560px]">
         <GameTopBar 
           score={score} 
@@ -325,10 +323,7 @@ export default function KnightTrapGame() {
         isOpen={gameStatus === 'lost'}
         score={score}
         reason={gameOverReason}
-        onRestart={() => {
-          resetGame();
-          startGame();
-        }}
+        onRestart={resetGame}
       />
     </div>
   );
