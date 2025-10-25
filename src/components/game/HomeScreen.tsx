@@ -36,7 +36,7 @@ export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void })
         style={{ backgroundImage: "url('/home-background.png')" }}
       >
         <div className="flex flex-col items-center gap-12 mb-20">
-          <img src="/Logo 8bit.png" alt="Logo" className="w-80 sm:w-96 md:w-[500px]" />
+          <img src="/Logo 8bit.png" alt="Logo" className="w-[461px] sm:w-[538px] md:w-[720px]" />
           
           <div className="flex flex-col items-center gap-4">
             <img 
