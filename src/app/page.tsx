@@ -8,11 +8,7 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
 
   if (gameStarted) {
-    return (
-      <main className="flex min-h-screen w-full flex-col items-center justify-center p-2 sm:p-4 lg:p-8">
-        <KnightTrapGame />
-      </main>
-    );
+    return <KnightTrapGame />;
   }
 
   return <HomeScreen onPlayClick={() => setGameStarted(true)} />;
