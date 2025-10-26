@@ -58,24 +58,28 @@ export default function LoadingScreen({ assets, onLoadingComplete }: LoadingScre
   const progress = assets.length > 0 ? (loadedAssets / assets.length) * 100 : 100;
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-black">
-      {!isLoaded ? (
-        <>
-          <div className="text-white text-4xl font-press-start mb-8">Loading...</div>
-          <div className="w-1/2 bg-gray-700 rounded-full h-8">
+    <div 
+      className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
+      style={{ backgroundImage: `url('/enterdungeon.jpg')` }}
+    >
+      <div className="absolute inset-0 bg-black/50" />
+      <div className="relative z-10 flex flex-col items-center justify-center text-white">
+        {!isLoaded ? (
+          <>
+            <div className="text-4xl font-press-start mb-8">Loading...</div>
+            <div className="w-full max-w-md bg-gray-700 rounded-full h-8">
               <div className="bg-green-500 h-8 rounded-full" style={{ width: `${progress}%` }}></div>
-          </div>
-        </>
-      ) : (
-        <>
+            </div>
+          </>
+        ) : (
           <button 
-            className="text-white text-4xl font-press-start animate-pulse"
+            className="text-5xl font-press-start animate-pulse"
             onClick={onLoadingComplete}
           >
             - ENTER -
           </button>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
