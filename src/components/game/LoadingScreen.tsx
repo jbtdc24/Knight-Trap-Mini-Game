@@ -9,10 +9,11 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ assets, onLoadingComplete }: LoadingScreenProps) {
   const [loadedAssets, setLoadedAssets] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     if (!assets || assets.length === 0) {
-        onLoadingComplete();
+        setIsLoaded(true);
         return;
     }
 
@@ -36,18 +37,45 @@ export default function LoadingScreen({ assets, onLoadingComplete }: LoadingScre
 
   useEffect(() => {
     if (loadedAssets === assets.length) {
-      onLoadingComplete();
+      setIsLoaded(true);
     }
-  }, [loadedAssets, assets.length, onLoadingComplete]);
+  }, [loadedAssets, assets.length]);
+  
+  useEffect(() => {
+    if (isLoaded) {
+      const handleEnter = (event: KeyboardEvent) => {
+        if (event.key === 'Enter') {
+          onLoadingComplete();
+        }
+      };
+      window.addEventListener('keydown', handleEnter);
+      return () => {
+        window.removeEventListener('keydown', handleEnter);
+      };
+    }
+  }, [isLoaded, onLoadingComplete]);
 
   const progress = assets.length > 0 ? (loadedAssets / assets.length) * 100 : 100;
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-black">
-        <div className="text-white text-4xl font-press-start mb-8">Loading...</div>
-        <div className="w-1/2 bg-gray-700 rounded-full h-8">
-            <div className="bg-green-500 h-8 rounded-full" style={{ width: `${progress}%` }}></div>
-        </div>
+      {!isLoaded ? (
+        <>
+          <div className="text-white text-4xl font-press-start mb-8">Loading...</div>
+          <div className="w-1/2 bg-gray-700 rounded-full h-8">
+              <div className="bg-green-500 h-8 rounded-full" style={{ width: `${progress}%` }}></div>
+          </div>
+        </>
+      ) : (
+        <>
+          <button 
+            className="text-white text-4xl font-press-start animate-pulse"
+            onClick={onLoadingComplete}
+          >
+            - ENTER -
+          </button>
+        </>
+      )}
     </div>
   );
 }
