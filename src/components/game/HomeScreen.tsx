@@ -4,15 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import HowToPlayDialog from './HowToPlayDialog';
 import { useAudio } from '@/context/AudioContext';
 import { useSfx } from '@/hooks/use-sfx';
-import { useSession, signIn, signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
+import AuthButton from './AuthButton'; // Import the new component
 
 export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void }) {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { musicVolume } = useAudio();
   const playSound = useSfx();
-  const { data: session } = useSession();
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -33,6 +31,7 @@ export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void })
 
   return (
     <>
+      <AuthButton /> {/* Add the new component here */}
       <audio ref={audioRef} src="/sfx/HomeScreen.MP3" preload="auto"></audio>
       <div 
         className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
@@ -59,29 +58,7 @@ export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void })
               onMouseDown={() => playSound('click')}
             />
 
-            <div className="mt-4 text-center">
-              {session ? (
-                <div className="flex flex-col items-center gap-2 text-white">
-                  <p className="text-lg">Welcome, {session.user?.name}</p>
-                  <Button
-                    onClick={() => signOut()}
-                    variant="destructive"
-                    onMouseEnter={() => playSound('hover')}
-                    onMouseDown={() => playSound('click')}
-                  >
-                    Sign Out
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={() => signIn('google')}
-                  onMouseEnter={() => playSound('hover')}
-                  onMouseDown={() => playSound('click')}
-                >
-                  Sign in with Google
-                </Button>
-              )}
-            </div>
+            {/* The old sign-in/out buttons have been removed from here */}
           </div>
         </div>
       </div>
