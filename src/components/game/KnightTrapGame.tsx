@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { getShadowKnightMoves } from '@/app/actions';
 import {
   BOARD_SIZE,
-  WHITE_KNIGHT_START,
   SHADOW_KNIGHTS_START,
   INITIAL_BOMB_DURATION,
   POINTS_PER_MOVE,
@@ -35,10 +34,38 @@ const createInitialBoard = (): BoardSquare[][] =>
     .fill(null)
     .map(() => Array(BOARD_SIZE).fill({ type: 'empty' }));
 
+    const initializeGameWithRandomPositions = () => {
+      const newBoard = createInitialBoard();
+      const occupiedPositions: Position[] = [];
+    
+      const whiteKnightStartPos = getRandomEmptySquare(newBoard, occupiedPositions);
+      if (!whiteKnightStartPos) {
+        // Handle the unlikely case where the board is full, though it shouldn't be on init
+        throw new Error("Could not find an empty square for the white knight.");
+      }
+      occupiedPositions.push(whiteKnightStartPos);
+    
+      const shadowKnightsStart: ShadowKnight[] = SHADOW_KNIGHTS_START.map(knight => {
+        const startPos = getRandomEmptySquare(newBoard, occupiedPositions);
+        if (!startPos) {
+          // Handle the unlikely case where the board is full
+          throw new Error("Could not find an empty square for a shadow knight.");
+        }
+        occupiedPositions.push(startPos);
+        return { ...knight, position: startPos };
+      });
+    
+      return {
+        board: newBoard,
+        whiteKnightPos: whiteKnightStartPos,
+        shadowKnights: shadowKnightsStart,
+      };
+    };
+
 export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () => void }) {
   const [board, setBoard] = useState<BoardSquare[][]>(createInitialBoard);
-  const [whiteKnightPos, setWhiteKnightPos] = useState<Position>(WHITE_KNIGHT_START);
-  const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => deepCopy(SHADOW_KNIGHTS_START));
+  const [whiteKnightPos, setWhiteKnightPos] = useState<Position>([0,0]);
+  const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>([]);
   const [previousShadowKnightPositions, setPreviousShadowKnightPositions] = useState<Position[]>([]); // New state
   const [bombs, setBombs] = useState<Bomb[]>([]);
   const [explosions, setExplosions] = useState<Position[]>([]);
@@ -72,9 +99,10 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   }, [gameStatus, musicVolume]);
 
   const resetGame = useCallback(() => {
-    setBoard(createInitialBoard());
-    setWhiteKnightPos(WHITE_KNIGHT_START);
-    setShadowKnights(deepCopy(SHADOW_KNIGHTS_START));
+    const { board, whiteKnightPos, shadowKnights } = initializeGameWithRandomPositions();
+    setBoard(board);
+    setWhiteKnightPos(whiteKnightPos);
+    setShadowKnights(shadowKnights);
     setPreviousShadowKnightPositions([]); // Reset new state
     setBombs([]);
     setExplosions([]);
@@ -91,6 +119,10 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
   useEffect(() => {
     if (gameStatus === 'starting') {
+      const { board, whiteKnightPos, shadowKnights } = initializeGameWithRandomPositions();
+      setBoard(board);
+      setWhiteKnightPos(whiteKnightPos);
+      setShadowKnights(shadowKnights);
       const timer = setTimeout(() => {
         playSound('startGame');
         setGameStatus('playing');
