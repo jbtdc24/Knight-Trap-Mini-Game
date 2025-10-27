@@ -1,26 +1,18 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useSfx } from "@/hooks/use-sfx";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import EditProfileDialog from "./EditProfileDialog"; // Import the dialog
+import EditNameDialog from "./EditNameDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Keep avatar for display
 
 export default function AuthButton() {
-  const { data: session } = useSession();
+  // The useSession hook now returns a status and an update function
+  const { data: session, status, update } = useSession();
   const playSound = useSfx();
 
-  // State for the dialog and user image
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [userImage, setUserImage] = useState("");
-
-  useEffect(() => {
-    // Set the initial image from the session
-    if (session?.user?.image) {
-      setUserImage(session.user.image);
-    }
-  }, [session]);
 
   const handleSignIn = () => {
     playSound("click");
@@ -32,10 +24,43 @@ export default function AuthButton() {
     signOut();
   };
 
-  const handleSaveProfile = (newImage: string) => {
-    // Update the image in the state (front-end only for now)
-    setUserImage(newImage);
+  // This function sends the new name to our secure API endpoint
+  const handleSaveName = async (newName: string) => {
+    const response = await fetch('/api/user/update-name', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ newName }),
+    });
+
+    if (response.ok) {
+      // If the API call is successful, we trigger the session update.
+      // NextAuth will refetch the session, and our custom callback will load the new name.
+      await update();
+      return true; // Indicate success
+    } else {
+      // Handle errors from the API if needed
+      console.error("Failed to update name");
+      return false; // Indicate failure
+    }
   };
+
+  // We show a loading state while the session is being fetched
+  if (status === "loading") {
+    return (
+        <div 
+            className="absolute top-4 left-4 z-50 text-white font-bold py-2 px-4 rounded"
+            style={{
+                background: "rgba(0, 0, 0, 0.5)",
+                border: "2px solid #a56c3a",
+                boxShadow: "0 0 10px #a56c3a",
+            }}
+        >
+            Loading...
+        </div>
+    );
+  }
 
   return (
     <>
@@ -49,9 +74,10 @@ export default function AuthButton() {
       >
         {session ? (
           <div className="flex items-center gap-4">
+            {/* We can still show the Google picture, just not edit it */}
             <Avatar className="h-8 w-8 border-2 border-yellow-700">
-              <AvatarImage src={userImage ?? undefined} alt={session.user?.name ?? ''} />
-              <AvatarFallback>{session.user?.name?.charAt(0)}</AvatarFallback>
+                <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? ''} />
+                <AvatarFallback>{session.user?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <span>Welcome, {session.user?.name}</span>
             <button
@@ -59,7 +85,7 @@ export default function AuthButton() {
               className="hover:underline text-sm font-normal"
               onMouseEnter={() => playSound("hover")}
             >
-              Edit
+              Edit Name
             </button>
             <button
               onClick={handleSignOut}
@@ -75,17 +101,17 @@ export default function AuthButton() {
             className="hover:underline"
             onMouseEnter={() => playSound("hover")}
           >
-            Signin/Sign up
+            Sign in / Sign up
           </button>
         )}
       </div>
 
-      {/* Render the dialog when showEditDialog is true */}
-      {showEditDialog && (
-        <EditProfileDialog
-          currentImage={userImage}
+      {/* Render the new EditNameDialog */}
+      {showEditDialog && session?.user?.name && (
+        <EditNameDialog
+          currentName={session.user.name}
           onClose={() => setShowEditDialog(false)}
-          onSave={handleSaveProfile}
+          onSave={handleSaveName}
         />
       )}
     </>
