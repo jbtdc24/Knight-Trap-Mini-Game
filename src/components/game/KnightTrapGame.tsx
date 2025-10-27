@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { getShadowKnightMoves } from '@/app/actions';
 import {
   BOARD_SIZE,
@@ -25,16 +25,17 @@ import GameBoard from './GameBoard';
 import GameTopBar from './GameTopBar';
 import GameOverDialog from './GameOverDialog';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '../ui/button';
-import { Play } from 'lucide-react';
-import { Logo } from '../icons/Logo';
+import StartingBattleOverlay from './StartingBattleOverlay';
+import { AnimatePresence } from 'framer-motion';
+import { useSfx, SoundEvent } from '@/hooks/use-sfx';
+import { useAudio } from '@/context/AudioContext';
 
 const createInitialBoard = (): BoardSquare[][] =>
   Array(BOARD_SIZE)
     .fill(null)
     .map(() => Array(BOARD_SIZE).fill({ type: 'empty' }));
 
-export default function KnightTrapGame() {
+export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () => void }) {
   const [board, setBoard] = useState<BoardSquare[][]>(createInitialBoard);
   const [whiteKnightPos, setWhiteKnightPos] = useState<Position>(WHITE_KNIGHT_START);
   const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => deepCopy(SHADOW_KNIGHTS_START));
@@ -44,7 +45,7 @@ export default function KnightTrapGame() {
   const [explosionMarks, setExplosionMarks] = useState<ExplosionMarkType[]>([]);
   const [score, setScore] = useState(0);
   const [turn, setTurn] = useState(0);
-  const [gameStatus, setGameStatus] = useState<GameStatus>('pre-game');
+  const [gameStatus, setGameStatus] = useState<GameStatus>('starting');
   const [gameOverReason, setGameOverReason] = useState<GameOverReason>(null);
   const [bombDuration, setBombDuration] = useState(INITIAL_BOMB_DURATION);
   const [totalCaptures, setTotalCaptures] = useState(0);
@@ -53,11 +54,22 @@ export default function KnightTrapGame() {
   const { toast } = useToast();
   const [boardShake, setBoardShake] = useState(0);
   const [illegalMovePos, setIllegalMovePos] = useState<Position | null>(null);
+  const playSound = useSfx();
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const { musicVolume } = useAudio();
 
-  const startGame = () => {
-    resetGame();
-    setGameStatus('playing');
-  };
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.loop = true;
+      audio.volume = musicVolume;
+      if (gameStatus === 'playing') {
+        audio.play().catch(e => console.error("Audio play failed:", e));
+      } else {
+        audio.pause();
+      }
+    }
+  }, [gameStatus, musicVolume]);
 
   const resetGame = useCallback(() => {
     setBoard(createInitialBoard());
@@ -69,18 +81,35 @@ export default function KnightTrapGame() {
     setExplosionMarks([]);
     setScore(0);
     setTurn(0);
-    setGameStatus('pre-game');
     setGameOverReason(null);
     setBombDuration(INITIAL_BOMB_DURATION);
     setTotalCaptures(0);
     setMultiplier(1);
-  }, []);
-  
-  const triggerExplosion = (pos: Position) => {
+    playSound('startGame');
+    setGameStatus('playing');
+  }, [playSound]);
+
+  useEffect(() => {
+    if (gameStatus === 'starting') {
+      const timer = setTimeout(() => {
+        playSound('startGame');
+        setGameStatus('playing');
+      }, 2000); // Show for 2 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameStatus, playSound]);
+
+  const triggerVisualExplosion = useCallback((pos: Position) => {
     setExplosions(prev => [...prev, pos]);
     setExplosionMarks(prev => [...prev, { position: pos, id: Date.now() }]);
     setBoardShake(prev => prev + 1);
-  }
+  }, []);
+  
+  const triggerExplosion = useCallback((pos: Position) => {
+    playSound('explosion');
+    triggerVisualExplosion(pos);
+  }, [playSound, triggerVisualExplosion]);
 
   useEffect(() => {
     if (illegalMovePos) {
@@ -110,20 +139,25 @@ export default function KnightTrapGame() {
 
   const handleGameOver = useCallback((reason: GameOverReason) => {
     if (gameStatus === 'playing') {
+      if (reason !== 'bomb') {
+        playSound('gameOver');
+      }
       setGameStatus('lost');
       setGameOverReason(reason);
     }
-  }, [gameStatus]);
+  }, [gameStatus, playSound]);
 
   const handlePlayerMove = (newPos: Position) => {
     if (gameStatus !== 'playing' || isAiThinking) return;
 
     if (!isMoveLegal(whiteKnightPos, newPos)) {
       setIllegalMovePos(newPos);
+      playSound('illegalMove');
       setTimeout(() => handleGameOver('illegalMove'), 500);
       return;
     }
 
+    playSound('move');
     const nextTurn = turn + 1;
     let tempScore = score;
     let tempMultiplier = multiplier;
@@ -149,12 +183,14 @@ export default function KnightTrapGame() {
     );
 
     if (capturedKnightIndex > -1) {
+      playSound('capture');
       tempTotalCaptures++;
       const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
       tempScore += POINTS_PER_CAPTURE * tempMultiplier;
       tempBombDuration++;
 
       if (newMultiplier > tempMultiplier) {
+        playSound('levelUp');
         toast({
           title: `Shadow Knight Captured!`,
           description: `Multiplier is now ${newMultiplier}x! Bomb duration is ${tempBombDuration}!`,
@@ -169,7 +205,7 @@ export default function KnightTrapGame() {
       
       const knightToRespawn = tempShadowKnights[capturedKnightIndex];
       if(knightToRespawn) {
-        triggerExplosion(knightToRespawn.position);
+        triggerVisualExplosion(knightToRespawn.position);
         knightToRespawn.status = 'respawning';
         knightToRespawn.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
       }
@@ -190,6 +226,10 @@ export default function KnightTrapGame() {
         previousShadowKnightPositions // Pass the new argument
       );
       
+      if (aiPositions.length > 0 && activeKnightsForAI.length > 0) {
+        playSound('shadowMove');
+      }
+
       // For the *next* turn, the AI needs to know where the knights were before this move.
       setPreviousShadowKnightPositions(oldShadowPositions);
       
@@ -214,6 +254,7 @@ export default function KnightTrapGame() {
             tempBombDuration++;
 
             if (newMultiplier > tempMultiplier) {
+              playSound('levelUp');
               toast({
                 title: `A Shadow Knight fell into a trap!`,
                 description: `Multiplier up to ${newMultiplier}x! Bomb duration increased.`,
@@ -285,25 +326,23 @@ export default function KnightTrapGame() {
   
   const activeShadowKnights = shadowKnights.filter(k => k.status === 'active');
 
-  if (gameStatus === 'pre-game') {
-    return (
-      <div className="flex flex-col items-center justify-center gap-8 text-center">
-        <Logo />
-        <Button onClick={startGame} size="lg" className="font-headline text-xl">
-            <Play className="mr-2" />
-            Start Game
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex w-full max-w-7xl flex-col items-center justify-center gap-8">
-      <GameTopBar 
-        score={score} 
-        multiplier={multiplier} 
-        bombDuration={bombDuration}
-      />
+    <div 
+      className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
+      style={{ backgroundImage: "url('/Ingamebackground.png')" }}
+    >
+      <audio ref={audioRef} src="/sfx/Ingame.MP3" preload="auto"></audio>
+      <AnimatePresence>
+        {gameStatus === 'starting' && <StartingBattleOverlay />}
+      </AnimatePresence>
+      <div className="w-full max-w-[560px]">
+        <GameTopBar 
+          score={score} 
+          multiplier={multiplier} 
+          bombDuration={bombDuration}
+          totalCaptures={totalCaptures}
+        />
+      </div>
       <GameBoard
         board={board}
         whiteKnightPos={whiteKnightPos}
@@ -322,10 +361,8 @@ export default function KnightTrapGame() {
         isOpen={gameStatus === 'lost'}
         score={score}
         reason={gameOverReason}
-        onRestart={() => {
-          resetGame();
-          startGame();
-        }}
+        onRestart={resetGame}
+        onReturnToHome={onReturnToHome}
       />
     </div>
   );

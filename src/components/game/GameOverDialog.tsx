@@ -10,13 +10,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { GameOverReason } from '@/lib/types';
-import { Repeat } from 'lucide-react';
+import { Repeat, Home } from 'lucide-react';
 
 type GameOverDialogProps = {
   isOpen: boolean;
   score: number;
   reason: GameOverReason;
   onRestart: () => void;
+  onReturnToHome: () => void;
 };
 
 const reasons: Record<NonNullable<GameOverReason>, { title: string, description: string }> = {
@@ -43,6 +44,7 @@ export default function GameOverDialog({
   score,
   reason,
   onRestart,
+  onReturnToHome,
 }: GameOverDialogProps) {
   const reasonText = reason ? reasons[reason] : { title: 'Game Over', description: '' };
   
@@ -61,8 +63,12 @@ export default function GameOverDialog({
             <p className="text-6xl font-bold font-headline text-foreground">{score}</p>
           </div>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={onRestart} className="w-full">
+        <AlertDialogFooter className="flex-col sm:flex-row sm:justify-center gap-2">
+          <AlertDialogAction onClick={onReturnToHome} className="w-full sm:w-auto">
+            <Home className="mr-2 h-4 w-4" />
+            Return to Home
+          </AlertDialogAction>
+          <AlertDialogAction onClick={onRestart} className="w-full sm:w-auto">
             <Repeat className="mr-2 h-4 w-4" />
             Play Again
           </AlertDialogAction>
