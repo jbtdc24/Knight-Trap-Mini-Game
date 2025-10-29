@@ -35,7 +35,7 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   if (!from || (to && isSamePosition(from, to))) {
     const y = to ? `${to[0] * 100}%` : (from ? `${from[0] * 100}%` : '0%');
     const x = to ? `${to[1] * 100}%` : (from ? `${from[1] * 100}%` : '0%');
-    return { y, x };
+    return { y, x, scale: 1.5 }; // Keep it scaled
   }
 
   const fromY = `${from[0] * 100}%`;
@@ -55,6 +55,7 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   return {
     y: [fromY, overshootY, toY],
     x: [fromX, overshootX, toX],
+    scale: [1.5, 2, 1.5], // From normal size, to bigger, back to normal
     zIndex: 10,
   };
 };
@@ -191,11 +192,11 @@ const GameBoard = ({
           className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
           initial={false}
           animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
-          transition={{ duration: 0.1, ease: 'circOut', times: [0, 0.7, 1] }}
+          transition={{ duration: 0.3, ease: 'easeInOut', times: [0, 0.5, 1] }}
         >
-          <motion.div className="h-full w-full" animate={{ scale: 1.5 }}>
+          <div className="h-full w-full">
             <KnightIcon />
-          </motion.div>
+          </div>
         </motion.div>
       </AnimatePresence>
 
@@ -210,11 +211,11 @@ const GameBoard = ({
               className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
               initial={false}
               animate={getLMoveAnimation(oldPos, knight.position)}
-              transition={{ duration: 0.1, ease: 'circOut', times: [0, 0.7, 1] }}
+              transition={{ duration: 0.3, ease: 'easeInOut', times: [0, 0.5, 1] }}
             >
-              <motion.div className="h-full w-full" animate={{ scale: 1.5 }}>
+              <div className="h-full w-full">
                 <ShadowKnightIcon />
-              </motion.div>
+              </div>
             </motion.div>
           );
         })}
