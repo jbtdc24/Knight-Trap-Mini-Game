@@ -317,10 +317,6 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         setTimeout(() => handleGameOver('trapped'), 500);
         return;
       }
-
-      if (validPlayerMoves.every(move => tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, move)))) {
-        setTimeout(() => handleGameOver('trapped'), 500);
-      }
     });
   };
   
