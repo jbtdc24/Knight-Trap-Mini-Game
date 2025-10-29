@@ -28,13 +28,14 @@ type GameBoardProps = {
   isAiThinking: boolean;
   boardShake: number;
   illegalMovePos: Position | null;
+  availableMoves: Position[];
 };
 
 const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   if (!from || (to && isSamePosition(from, to))) {
     const y = to ? `${to[0] * 100}%` : (from ? `${from[0] * 100}%` : '0%');
     const x = to ? `${to[1] * 100}%` : (from ? `${from[1] * 100}%` : '0%');
-    return { y, x, transition: { duration: 0 } };
+    return { y, x };
   }
 
   const fromY = `${from[0] * 100}%`;
@@ -69,6 +70,7 @@ const GameBoard = ({
   isAiThinking,
   boardShake,
   illegalMovePos,
+  availableMoves,
 }: GameBoardProps) => {
   const prevWhiteKnightPos = usePrevious(whiteKnightPos);
   const prevShadowKnights = usePrevious(shadowKnights);
@@ -102,6 +104,33 @@ const GameBoard = ({
       style={{ backgroundImage: 'url(/Board.png)', backgroundSize: 'cover' }}
       onClick={handleBoardClick}
     >
+      <AnimatePresence>
+        {availableMoves.map((move) => (
+          <motion.div
+            key={`available-move-${move[0]}-${move[1]}`}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="pointer-events-none absolute h-[12.5%] w-[12.5%] flex items-center justify-center"
+            style={{ top: `${move[0] * 12.5}%`, left: `${move[1] * 12.5}%` }}
+          >
+            <motion.div
+                className="h-1/3 w-1/3 rounded-full bg-green-500/50"
+                animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.5, 0.7, 0.5]
+                }}
+                transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut'
+                }}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
       <AnimatePresence>
         {bombs.map((bomb) => (
           <motion.div

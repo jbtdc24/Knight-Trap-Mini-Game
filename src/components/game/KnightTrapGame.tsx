@@ -57,6 +57,17 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const playSound = useSfx();
   const audioRef = useRef<HTMLAudioElement>(null);
   const { musicVolume } = useAudio();
+  const [availableMoves, setAvailableMoves] = useState<Position[]>([]);
+
+  useEffect(() => {
+    if (gameStatus === 'playing' && totalCaptures < 6) {
+      const allPiecePositions = [whiteKnightPos, ...shadowKnights.filter(k => k.status === 'active').map(k => k.position)];
+      const validMoves = getValidKnightMoves(whiteKnightPos, board, allPiecePositions);
+      setAvailableMoves(validMoves);
+    } else {
+      setAvailableMoves([]);
+    }
+  }, [turn, gameStatus, totalCaptures, whiteKnightPos, shadowKnights, board]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -351,7 +362,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         isAiThinking={isAiThinking}
         boardShake={boardShake}
         illegalMovePos={illegalMovePos}
-      />
+        availableMoves={availableMoves}      />
 
       <GameOverDialog
         isOpen={gameStatus === 'lost'}
