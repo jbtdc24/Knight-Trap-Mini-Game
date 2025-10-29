@@ -1,4 +1,4 @@
-import type { Position, ShadowKnight } from './types';
+import type { Position } from './types';
 
 export const BOARD_SIZE = 8;
 
@@ -11,10 +11,6 @@ export const INITIAL_BOMB_DURATION = 3; // In player moves
 
 // Knights
 export const WHITE_KNIGHT_START: Position = [4, 4];
-export const SHADOW_KNIGHTS_START: ShadowKnight[] = [
-  { id: 1, position: [0, 0], status: 'active', respawnTurn: null },
-  { id: 2, position: [0, 7], status: 'active', respawnTurn: null },
-];
 export const SHADOW_KNIGHT_RESPAWN_DELAY = 3; // in player moves
 
 

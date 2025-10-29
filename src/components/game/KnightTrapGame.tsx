@@ -5,13 +5,12 @@ import { getShadowKnightMoves } from '@/app/actions';
 import {
   BOARD_SIZE,
   WHITE_KNIGHT_START,
-  SHADOW_KNIGHTS_START,
   INITIAL_BOMB_DURATION,
   POINTS_PER_MOVE,
   POINTS_PER_CAPTURE,
   SHADOW_KNIGHT_RESPAWN_DELAY,
 } from '@/lib/constants';
-import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves, deepCopy } from '@/lib/game-logic';
+import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves, deepCopy, getFurthestEmptySquare } from '@/lib/game-logic';
 import type {
   Position,
   GameStatus,
@@ -35,10 +34,33 @@ const createInitialBoard = (): BoardSquare[][] =>
     .fill(null)
     .map(() => Array(BOARD_SIZE).fill({ type: 'empty' }));
 
+const initializeShadowKnights = (board: BoardSquare[][], whiteKnightPos: Position): ShadowKnight[] => {
+    const initialPositions: Position[] = [];
+    const shadowKnights: ShadowKnight[] = [];
+    let occupied = [whiteKnightPos];
+
+    for (let i = 0; i < 2; i++) {
+        const newPos = getRandomEmptySquare(board, occupied);
+        if (newPos) {
+            initialPositions.push(newPos);
+            occupied.push(newPos);
+            shadowKnights.push({ id: i + 1, position: newPos, status: 'active', respawnTurn: null });
+        } else {
+            // Fallback if random placement fails, though this is unlikely in a fresh game
+            const fallbackPos: Position = [0, i * 7];
+            initialPositions.push(fallbackPos);
+            occupied.push(fallbackPos);
+            shadowKnights.push({ id: i + 1, position: fallbackPos, status: 'active', respawnTurn: null });
+        }
+    }
+    return shadowKnights;
+};
+
+
 export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () => void }) {
   const [board, setBoard] = useState<BoardSquare[][]>(createInitialBoard);
   const [whiteKnightPos, setWhiteKnightPos] = useState<Position>(WHITE_KNIGHT_START);
-  const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => deepCopy(SHADOW_KNIGHTS_START));
+  const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => initializeShadowKnights(board, whiteKnightPos));
   const [previousShadowKnightPositions, setPreviousShadowKnightPositions] = useState<Position[]>([]); // New state
   const [bombs, setBombs] = useState<Bomb[]>([]);
   const [explosions, setExplosions] = useState<Position[]>([]);
@@ -83,9 +105,11 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   }, [gameStatus, musicVolume]);
 
   const resetGame = useCallback(() => {
-    setBoard(createInitialBoard());
-    setWhiteKnightPos(WHITE_KNIGHT_START);
-    setShadowKnights(deepCopy(SHADOW_KNIGHTS_START));
+    const newBoard = createInitialBoard();
+    const newWhiteKnightPos = WHITE_KNIGHT_START;
+    setBoard(newBoard);
+    setWhiteKnightPos(newWhiteKnightPos);
+    setShadowKnights(initializeShadowKnights(newBoard, newWhiteKnightPos));
     setPreviousShadowKnightPositions([]); // Reset new state
     setBombs([]);
     setExplosions([]);
@@ -297,7 +321,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       tempShadowKnights.forEach((knight: ShadowKnight) => {
         if (knight.status === 'respawning' && knight.respawnTurn !== null && nextTurn >= knight.respawnTurn) {
           const occupiedForRespawn = [newPos, ...tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active').map((k: ShadowKnight) => k.position)];
-          const respawnSquare = getRandomEmptySquare(board, occupiedForRespawn, tempBombs);
+          const respawnSquare = getFurthestEmptySquare(board, occupiedForRespawn, tempBombs, newPos);
           if (respawnSquare) {
             knight.position = respawnSquare;
             knight.status = 'active';

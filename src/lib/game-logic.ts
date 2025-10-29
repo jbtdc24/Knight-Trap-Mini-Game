@@ -76,3 +76,33 @@ export const getRandomEmptySquare = (
 export function deepCopy<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
+
+export const getFurthestEmptySquare = (
+    board: BoardSquare[][],
+    occupiedPositions: Position[],
+    bombs: Bomb[],
+    referencePosition: Position
+): Position | null => {
+    let furthestSquare: Position | null = null;
+    let maxDist = -1;
+
+    const bombPositions = bombs.map(b => b.position);
+
+    for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+            const pos: Position = [i, j];
+            const isOccupied = occupiedPositions.some(p => isSamePosition(p, pos));
+            const hasBomb = bombPositions.some(p => isSamePosition(p, pos));
+
+            if (!isOccupied && !hasBomb) {
+                const dist = Math.abs(pos[0] - referencePosition[0]) + Math.abs(pos[1] - referencePosition[1]);
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    furthestSquare = pos;
+                }
+            }
+        }
+    }
+
+    return furthestSquare;
+};
