@@ -1,12 +1,13 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType } from '@/lib/types';
+import type { Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType, Trail as TrailType } from '@/lib/types';
 import { KnightIcon } from '../icons/KnightIcon';
 import { ShadowKnightIcon } from '../icons/ShadowKnightIcon';
 import { Explosion } from '../icons/Explosion';
 import { useEffect, useRef } from 'react';
 import { isSamePosition } from '@/lib/game-logic';
+import Trail from './Trail';
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
@@ -23,6 +24,7 @@ type GameBoardProps = {
   bombs: Bomb[];
   explosions: Position[];
   explosionMarks: ExplosionMarkType[];
+  trails: TrailType[];
   onMove: (pos: Position) => void;
   gameStatus: GameStatus;
   isAiThinking: boolean;
@@ -79,6 +81,7 @@ const GameBoard = ({
   bombs,
   explosions,
   explosionMarks,
+  trails,
   onMove,
   gameStatus,
   isAiThinking,
@@ -125,6 +128,12 @@ const GameBoard = ({
       style={{ backgroundImage: 'url(/Board.png)', backgroundSize: 'cover' }}
       onClick={handleBoardClick}
     >
+      <AnimatePresence>
+        {trails.map((trail) => (
+          <Trail key={trail.id} path={trail.path} />
+        ))}
+      </AnimatePresence>
+
       <AnimatePresence>
         {availableMoves.map((move) => (
           <motion.div

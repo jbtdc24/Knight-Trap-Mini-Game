@@ -19,6 +19,7 @@ import type {
   GameOverReason,
   ShadowKnight,
   ExplosionMark as ExplosionMarkType,
+  Trail,
 } from '@/lib/types';
 import GameBoard from './GameBoard';
 import GameTopBar from './GameTopBar';
@@ -44,13 +45,12 @@ const initializeShadowKnights = (board: BoardSquare[][], whiteKnightPos: Positio
         if (newPos) {
             initialPositions.push(newPos);
             occupied.push(newPos);
-            shadowKnights.push({ id: i + 1, position: newPos, status: 'active', respawnTurn: null });
+            shadowKnights.push({ id: `shadow-${i + 1}`, position: newPos, status: 'active', respawnTurn: null });
         } else {
-            // Fallback if random placement fails, though this is unlikely in a fresh game
             const fallbackPos: Position = [0, i * 7];
             initialPositions.push(fallbackPos);
             occupied.push(fallbackPos);
-            shadowKnights.push({ id: i + 1, position: fallbackPos, status: 'active', respawnTurn: null });
+            shadowKnights.push({ id: `shadow-${i + 1}`, position: fallbackPos, status: 'active', respawnTurn: null });
         }
     }
     return shadowKnights;
@@ -61,7 +61,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const [board, setBoard] = useState<BoardSquare[][]>(createInitialBoard);
   const [whiteKnightPos, setWhiteKnightPos] = useState<Position>(WHITE_KNIGHT_START);
   const [shadowKnights, setShadowKnights] = useState<ShadowKnight[]>(() => initializeShadowKnights(board, whiteKnightPos));
-  const [previousShadowKnightPositions, setPreviousShadowKnightPositions] = useState<Position[]>([]); // New state
+  const [previousShadowKnightPositions, setPreviousShadowKnightPositions] = useState<Position[]>([]);
+  const [trails, setTrails] = useState<Trail[]>([]);
   const [bombs, setBombs] = useState<Bomb[]>([]);
   const [explosions, setExplosions] = useState<Position[]>([]);
   const [explosionMarks, setExplosionMarks] = useState<ExplosionMarkType[]>([]);
@@ -110,7 +111,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     setBoard(newBoard);
     setWhiteKnightPos(newWhiteKnightPos);
     setShadowKnights(initializeShadowKnights(newBoard, newWhiteKnightPos));
-    setPreviousShadowKnightPositions([]); // Reset new state
+    setPreviousShadowKnightPositions([]);
+    setTrails([]);
     setBombs([]);
     setExplosions([]);
     setExplosionMarks([]);
@@ -137,7 +139,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
   const triggerVisualExplosion = useCallback((pos: Position) => {
     setExplosions(prev => [...prev, pos]);
-    setExplosionMarks(prev => [...prev, { position: pos, id: Date.now() }]);
+    setExplosionMarks(prev => [...prev, { position: pos, id: Date.now().toString() }]);
     setBoardShake(prev => prev + 1);
   }, []);
   
@@ -184,6 +186,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
   const handlePlayerMove = (newPos: Position) => {
     if (gameStatus !== 'playing' || isAiThinking) return;
+
+    setTrails([]);
 
     if (!isMoveLegal(whiteKnightPos, newPos)) {
       setIllegalMovePos(newPos);
@@ -258,16 +262,16 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         board, 
         tempBombs, 
         nextTurn,
-        previousShadowKnightPositions // Pass the new argument
+        previousShadowKnightPositions
       );
       
+      setPreviousShadowKnightPositions(oldShadowPositions);
+
       if (aiPositions.length > 0 && activeKnightsForAI.length > 0) {
         playSound('shadowMove');
       }
 
-      // For the *next* turn, the AI needs to know where the knights were before this move.
-      setPreviousShadowKnightPositions(oldShadowPositions);
-      
+      const newTrails: Trail[] = [];
       const destroyedKnightOriginalPositions: Position[] = [];
 
       aiPositions.forEach((newAiPos: Position, index: number) => {
@@ -275,6 +279,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         const knightInState = tempShadowKnights.find((k: ShadowKnight) => k.id === knightId);
 
         if (knightInState) {
+          const oldPos = knightInState.position;
           const isBomb = tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, newAiPos));
           if (isBomb) {
             tempBombs = tempBombs.filter((b: Bomb) => !isSamePosition(b.position, newAiPos));
@@ -303,10 +308,13 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
             }
 
           } else {
+            newTrails.push({ id: knightId, path: [oldPos, newAiPos] });
             knightInState.position = newAiPos;
           }
         }
       });
+
+      setTrails(prev => [...prev, ...newTrails]);
       
       oldShadowPositions.forEach((oldPos: Position) => {
         const wasDestroyedByBomb = destroyedKnightOriginalPositions.some(destroyedPos => isSamePosition(destroyedPos, oldPos));
@@ -375,12 +383,12 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         />
       </div>
       <GameBoard
-        board={board}
         whiteKnightPos={whiteKnightPos}
         shadowKnights={activeShadowKnights}
         bombs={bombs}
         explosions={explosions}
         explosionMarks={explosionMarks}
+        trails={trails}
         onMove={handlePlayerMove}
         gameStatus={gameStatus}
         isAiThinking={isAiThinking}
