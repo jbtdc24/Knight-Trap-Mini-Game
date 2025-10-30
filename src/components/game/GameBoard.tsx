@@ -45,16 +45,32 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
 
   const dx = to[1] - from[1];
   const dy = to[0] - from[0];
+
+  if (dx === 0 && dy === 0) {
+    return { y: toY, x: toX, scale: 1.5 };
+  }
+
+  // Midpoint of the move
+  const midX = from[1] + dx / 2;
+  const midY = from[0] + dy / 2;
+
+  // Calculate a perpendicular offset
   const dist = Math.sqrt(dx * dx + dy * dy);
-  const overshootAmount = dist > 0 ? 0.2 : 0;
-  const normDx = dist > 0 ? dx / dist : 0;
-  const normDy = dist > 0 ? dy / dist : 0;
-  const overshootX = `${(to[1] + normDx * overshootAmount) * 100}%`;
-  const overshootY = `${(to[0] + normDy * overshootAmount) * 100}%`;
+  const arcMagnitude = 0.5; // Controls the "height" of the arc. 0.5 = half a square.
+
+  // Perpendicular vector: (-dy, dx), normalized and scaled
+  const offsetX = (-dy / dist) * arcMagnitude;
+  const offsetY = (dx / dist) * arcMagnitude;
+  
+  // Add some randomness to the arc direction
+  const randomFactor = Math.random() > 0.5 ? 1 : -1;
+
+  const arcX = `${(midX + offsetX * randomFactor) * 100}%`;
+  const arcY = `${(midY + offsetY * randomFactor) * 100}%`;
 
   return {
-    y: [fromY, overshootY, toY],
-    x: [fromX, overshootX, toX],
+    y: [fromY, arcY, toY],
+    x: [fromX, arcX, toX],
     scale: [1.5, 2, 1.5], // From normal size, to bigger, back to normal
     zIndex: 10,
   };
