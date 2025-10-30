@@ -1,13 +1,14 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType, Trail as TrailType } from '@/lib/types';
+import type { Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType, Trail as TrailType, FreezeRune as FreezeRuneType } from '@/lib/types';
 import { KnightIcon } from '../icons/KnightIcon';
 import { ShadowKnightIcon } from '../icons/ShadowKnightIcon';
 import { Explosion } from '../icons/Explosion';
 import { useEffect, useRef } from 'react';
 import { isSamePosition } from '@/lib/game-logic';
 import Trail from './Trail';
+import FreezeRune from './FreezeRune';
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
@@ -31,6 +32,7 @@ type GameBoardProps = {
   boardShake: number;
   illegalMovePos: Position | null;
   availableMoves: Position[];
+  freezeRune: FreezeRuneType | null;
 };
 
 const getLMoveAnimation = (from: Position | undefined, to: Position) => {
@@ -88,6 +90,7 @@ const GameBoard = ({
   boardShake,
   illegalMovePos,
   availableMoves,
+  freezeRune
 }: GameBoardProps) => {
   const prevWhiteKnightPos = usePrevious(whiteKnightPos);
   const prevShadowKnights = usePrevious(shadowKnights);
@@ -195,6 +198,21 @@ const GameBoard = ({
       </AnimatePresence>
 
       <AnimatePresence>
+        {freezeRune && (
+          <motion.div
+            key={freezeRune.id}
+            className="absolute h-[12.5%] w-[12.5%]"
+            style={{ top: `${freezeRune.position[0] * 12.5}%`, left: `${freezeRune.position[1] * 12.5}%` }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+          >
+            <FreezeRune />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {explosionMarks.map((mark) => (
           <motion.div
             key={`mark-${mark.id}`}
@@ -252,8 +270,16 @@ const GameBoard = ({
               exit={{ scale: 0, opacity: 0, rotate: 45, transition: { duration: 0.5, ease: 'easeInOut' } }}
               transition={knightTransition}
             >
-              <div className="h-full w-full">
+              <div className="relative h-full w-full">
                 <ShadowKnightIcon />
+                {knight.frozenTurnsLeft > 0 && (
+                  <motion.div 
+                    className="absolute inset-0 bg-blue-500/50 rounded-full"
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0 }}
+                  />
+                )}
               </div>
             </motion.div>
           );

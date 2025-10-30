@@ -9,6 +9,9 @@ import {
   POINTS_PER_MOVE,
   POINTS_PER_CAPTURE,
   SHADOW_KNIGHT_RESPAWN_DELAY,
+  FREEZE_RUNE_SPAWN_CHANCE,
+  FREEZE_RUNE_DURATION,
+  FREEZE_TURNS
 } from '@/lib/constants';
 import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves, deepCopy, getFurthestEmptySquare } from '@/lib/game-logic';
 import type {
@@ -20,10 +23,12 @@ import type {
   ShadowKnight,
   ExplosionMark as ExplosionMarkType,
   Trail,
+  FreezeRune as FreezeRuneType
 } from '@/lib/types';
 import GameBoard from './GameBoard';
 import GameTopBar from './GameTopBar';
 import GameOverDialog from './GameOverDialog';
+import Inventory from './Inventory';
 import { useToast } from '@/hooks/use-toast';
 import StartingBattleOverlay from './StartingBattleOverlay';
 import { AnimatePresence } from 'framer-motion';
@@ -45,12 +50,12 @@ const initializeShadowKnights = (board: BoardSquare[][], whiteKnightPos: Positio
         if (newPos) {
             initialPositions.push(newPos);
             occupied.push(newPos);
-            shadowKnights.push({ id: `shadow-${i + 1}`, position: newPos, status: 'active', respawnTurn: null });
+            shadowKnights.push({ id: `shadow-${i + 1}`, position: newPos, status: 'active', respawnTurn: null, frozenTurnsLeft: 0 });
         } else {
             const fallbackPos: Position = [0, i * 7];
             initialPositions.push(fallbackPos);
             occupied.push(fallbackPos);
-            shadowKnights.push({ id: `shadow-${i + 1}`, position: fallbackPos, status: 'active', respawnTurn: null });
+            shadowKnights.push({ id: `shadow-${i + 1}`, position: fallbackPos, status: 'active', respawnTurn: null, frozenTurnsLeft: 0 });
         }
     }
     return shadowKnights;
@@ -81,12 +86,13 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const audioRef = useRef<HTMLAudioElement>(null);
   const { musicVolume } = useAudio();
   const [availableMoves, setAvailableMoves] = useState<Position[]>([]);
+  const [freezeRune, setFreezeRune] = useState<FreezeRuneType | null>(null);
+  const [inventory, setInventory] = useState<string[]>([]);
 
   useEffect(() => {
     if (gameStatus === 'playing' && totalCaptures < 6) {
       const allPiecePositions = [whiteKnightPos, ...shadowKnights.filter(k => k.status === 'active').map(k => k.position)];
-      const validMoves = getValidKnightMoves(whiteKnightPos, board, allPiecePositions);
-      setAvailableMoves(validMoves);
+      setAvailableMoves(getValidKnightMoves(whiteKnightPos, board, allPiecePositions));
     } else {
       setAvailableMoves([]);
     }
@@ -122,6 +128,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     setBombDuration(INITIAL_BOMB_DURATION);
     setTotalCaptures(0);
     setMultiplier(1);
+    setFreezeRune(null);
+    setInventory([]);
     playSound('startGame');
     setGameStatus('playing');
   }, [playSound]);
@@ -131,11 +139,20 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       const timer = setTimeout(() => {
         playSound('startGame');
         setGameStatus('playing');
-      }, 2000); // Show for 2 seconds
+      }, 2000);
 
       return () => clearTimeout(timer);
     }
   }, [gameStatus, playSound]);
+
+  useEffect(() => {
+    if (freezeRune && gameStatus === 'playing') {
+      const timer = setTimeout(() => {
+        setFreezeRune(null);
+      }, FREEZE_RUNE_DURATION);
+      return () => clearTimeout(timer);
+    }
+  }, [freezeRune, gameStatus]);
 
   const triggerVisualExplosion = useCallback((pos: Position) => {
     setExplosions(prev => [...prev, pos]);
@@ -147,6 +164,17 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     playSound('explosion');
     triggerVisualExplosion(pos);
   }, [playSound, triggerVisualExplosion]);
+
+  const useItem = (item: string) => {
+    if (item === 'freeze') {
+      playSound('freeze');
+      setShadowKnights(prev => 
+        prev.map(k => k.status === 'active' ? { ...k, frozenTurnsLeft: FREEZE_TURNS } : k)
+      );
+      setInventory(prev => prev.filter(i => i !== 'freeze'));
+      toast({ title: "Ice Age!", description: "Shadow Knights are frozen for 5 turns." });
+    }
+  };
 
   useEffect(() => {
     if (illegalMovePos) {
@@ -204,6 +232,17 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     let tempTotalCaptures = totalCaptures;
     let tempShadowKnights = deepCopy(shadowKnights);
     let tempBombs = deepCopy(bombs);
+    let tempFreezeRune = deepCopy(freezeRune);
+
+    // Check for rune collection
+    if (tempFreezeRune && isSamePosition(newPos, tempFreezeRune.position)) {
+      playSound('collect');
+      if (!inventory.includes('freeze')) {
+        setInventory(prev => [...prev, 'freeze']);
+      }
+      tempFreezeRune = null;
+      setFreezeRune(null);
+    }
 
     const landingOnBombIndex = tempBombs.findIndex((bomb: Bomb) => isSamePosition(bomb.position, newPos));
     if (landingOnBombIndex > -1) {
@@ -253,21 +292,26 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     tempScore += POINTS_PER_MOVE * tempMultiplier;
 
     startAiTransition(async () => {
-      const activeKnightsForAI = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
-      const oldShadowPositions = activeKnightsForAI.map((k: ShadowKnight) => k.position);
+      const activeKnightsForAI = tempShadowKnights.filter(k => k.status === 'active' && k.frozenTurnsLeft === 0);
+      const frozenKnights = tempShadowKnights.filter(k => k.frozenTurnsLeft > 0);
+      const oldShadowPositions = activeKnightsForAI.map(k => k.position);
       
-      const { newPositions: aiPositions } = await getShadowKnightMoves(
-        newPos, 
-        oldShadowPositions, 
-        board, 
-        tempBombs, 
-        nextTurn,
-        previousShadowKnightPositions
-      );
+      let aiPositions: Position[] = [];
+      if (activeKnightsForAI.length > 0) {
+        const { newPositions } = await getShadowKnightMoves(
+          newPos, 
+          oldShadowPositions, 
+          board, 
+          tempBombs, 
+          nextTurn,
+          previousShadowKnightPositions
+        );
+        aiPositions = newPositions;
+      }
       
       setPreviousShadowKnightPositions(oldShadowPositions);
 
-      if (aiPositions.length > 0 && activeKnightsForAI.length > 0) {
+      if (aiPositions.length > 0) {
         playSound('shadowMove');
       }
 
@@ -314,6 +358,9 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         }
       });
 
+      // Decrement freeze counter
+      frozenKnights.forEach(k => k.frozenTurnsLeft--);
+
       setTrails(prev => [...prev, ...newTrails]);
       
       oldShadowPositions.forEach((oldPos: Position) => {
@@ -337,6 +384,15 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
           }
         }
       });
+
+      // Rune Spawning Logic
+      if (tempTotalCaptures > 0 && !tempFreezeRune && Math.random() < FREEZE_RUNE_SPAWN_CHANCE) {
+        const occupiedForRune = [newPos, ...tempShadowKnights.map(k => k.position)];
+        const runePos = getRandomEmptySquare(board, occupiedForRune, tempBombs.map(b => b.position));
+        if (runePos) {
+          setFreezeRune({ position: runePos, id: Date.now().toString() });
+        }
+      }
       
       setScore(tempScore);
       setTotalCaptures(tempTotalCaptures);
@@ -349,7 +405,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
       const activeAfterRespawn = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
       if (activeAfterRespawn.some((p: ShadowKnight) => isSamePosition(p.position, newPos))) {
-        setTimeout(() => handleGameOver('captured'), 500); // Short delay to see the capture
+        setTimeout(() => handleGameOver('captured'), 500);
         return;
       }
       
@@ -382,6 +438,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
           totalCaptures={totalCaptures}
         />
       </div>
+      <Inventory items={inventory} onUseItem={useItem} />
       <GameBoard
         whiteKnightPos={whiteKnightPos}
         shadowKnights={activeShadowKnights}
@@ -394,7 +451,9 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         isAiThinking={isAiThinking}
         boardShake={boardShake}
         illegalMovePos={illegalMovePos}
-        availableMoves={availableMoves}      />
+        availableMoves={availableMoves}
+        freezeRune={freezeRune}
+      />
 
       <GameOverDialog
         isOpen={gameStatus === 'lost'}

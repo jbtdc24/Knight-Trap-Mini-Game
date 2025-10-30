@@ -1,18 +1,9 @@
-import type { Position } from './types';
-
 export const BOARD_SIZE = 8;
-
-// Points
+export const WHITE_KNIGHT_START: [number, number] = [4, 4];
+export const INITIAL_BOMB_DURATION = 3;
 export const POINTS_PER_MOVE = 10;
 export const POINTS_PER_CAPTURE = 25;
-
-// Bombs
-export const INITIAL_BOMB_DURATION = 3; // In player moves
-
-// Knights
-export const WHITE_KNIGHT_START: Position = [4, 4];
-export const SHADOW_KNIGHT_RESPAWN_DELAY = 3; // in player moves
-
-
-// Gameplay Rules
-export const VALID_MOVE_INDICATOR_CAPTURE_THRESHOLD = 5;
+export const SHADOW_KNIGHT_RESPAWN_DELAY = 3; // in turns
+export const FREEZE_RUNE_SPAWN_CHANCE = 0.15;
+export const FREEZE_RUNE_DURATION = 30000; // 30 seconds
+export const FREEZE_TURNS = 5;
