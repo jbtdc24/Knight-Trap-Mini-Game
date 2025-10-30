@@ -56,17 +56,14 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
 
   // Calculate a perpendicular offset
   const dist = Math.sqrt(dx * dx + dy * dy);
-  const arcMagnitude = 0.5; // Controls the "height" of the arc. 0.5 = half a square.
+  const arcMagnitude = 0.75; // Controls the "height" of the arc.
 
   // Perpendicular vector: (-dy, dx), normalized and scaled
   const offsetX = (-dy / dist) * arcMagnitude;
   const offsetY = (dx / dist) * arcMagnitude;
-  
-  // Add some randomness to the arc direction
-  const randomFactor = Math.random() > 0.5 ? 1 : -1;
 
-  const arcX = `${(midX + offsetX * randomFactor) * 100}%`;
-  const arcY = `${(midY + offsetY * randomFactor) * 100}%`;
+  const arcX = `${(midX + offsetX) * 100}%`;
+  const arcY = `${(midY + offsetY) * 100}%`;
 
   return {
     y: [fromY, arcY, toY],
@@ -110,6 +107,13 @@ const GameBoard = ({
 
     onMove([row, col]);
   };
+  
+  const knightTransition = {
+    default: { ease: 'backOut', duration: 0.6 },
+    y: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+    x: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+    scale: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+  }
 
   return (
     <motion.div
@@ -209,17 +213,20 @@ const GameBoard = ({
       </AnimatePresence>
 
       <AnimatePresence>
-        <motion.div
-          key="white-knight"
-          className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
-          initial={false}
-          animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
-          transition={{ ease: 'backOut', duration: 0.4, times: [0, 0.5, 1] }}
-        >
-          <div className="h-full w-full">
-            <KnightIcon />
-          </div>
-        </motion.div>
+        {gameStatus !== 'lost' && (
+          <motion.div
+            key="white-knight"
+            className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
+            initial={false}
+            animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
+            exit={{ scale: 0, opacity: 0, rotate: 45, transition: { duration: 0.5, ease: 'easeInOut' } }}
+            transition={knightTransition}
+          >
+            <div className="h-full w-full">
+              <KnightIcon />
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -233,7 +240,8 @@ const GameBoard = ({
               className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
               initial={false}
               animate={getLMoveAnimation(oldPos, knight.position)}
-              transition={{ ease: 'backOut', duration: 0.4, times: [0, 0.5, 1] }}
+              exit={{ scale: 0, opacity: 0, rotate: 45, transition: { duration: 0.5, ease: 'easeInOut' } }}
+              transition={knightTransition}
             >
               <div className="h-full w-full">
                 <ShadowKnightIcon />
