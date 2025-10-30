@@ -152,8 +152,14 @@ const GameBoard = ({
                   'drop-shadow(0 0 10px #EF4444)',
                   'drop-shadow(0 0 2px #F87171)',
                 ],
+                scale: [1, 1.1, 1, 0.9, 1],
+                rotate: [0, 5, -5, 5, 0],
               }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
             />
           </motion.div>
         ))}
@@ -192,7 +198,7 @@ const GameBoard = ({
           className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
           initial={false}
           animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
-          transition={{ duration: 0.3, ease: 'easeInOut', times: [0, 0.5, 1] }}
+          transition={{ ease: 'backOut', duration: 0.4, times: [0, 0.5, 1] }}
         >
           <div className="h-full w-full">
             <KnightIcon />
@@ -211,7 +217,7 @@ const GameBoard = ({
               className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
               initial={false}
               animate={getLMoveAnimation(oldPos, knight.position)}
-              transition={{ duration: 0.3, ease: 'easeInOut', times: [0, 0.5, 1] }}
+              transition={{ ease: 'backOut', duration: 0.4, times: [0, 0.5, 1] }}
             >
               <div className="h-full w-full">
                 <ShadowKnightIcon />
