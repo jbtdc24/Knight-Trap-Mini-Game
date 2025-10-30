@@ -2,19 +2,24 @@
 
 import React from 'react';
 import InventoryItem from './InventoryItem';
+import { INVENTORY_SIZE } from '@/lib/constants';
 
 const Inventory = ({ items, onUseItem }: { items: string[], onUseItem: (item: string) => void }) => {
+  const inventorySlots = new Array(INVENTORY_SIZE).fill(null);
+
   return (
-    <div className="absolute top-0 left-0 p-4">
+    <div className="p-4">
       <div className="bg-gray-800/50 p-2 rounded-lg flex space-x-2">
-        {items.map((item, index) => (
-          <InventoryItem key={index} item={item} onUse={() => onUseItem(item)} />
-        ))}
-        {items.length === 0 && (
-          <div className="w-16 h-16 border-2 border-dashed border-gray-600 rounded-md flex items-center justify-center">
-            <span className="text-gray-500 text-xs">Empty</span>
-          </div>
-        )}
+        {inventorySlots.map((_, index) => {
+          const item = items[index];
+          return item ? (
+            <InventoryItem key={index} item={item} onUse={() => onUseItem(item)} />
+          ) : (
+            <div key={index} className="w-16 h-16 border-2 border-dashed border-gray-600 rounded-md flex items-center justify-center">
+              <span className="text-gray-500 text-xs">Empty</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

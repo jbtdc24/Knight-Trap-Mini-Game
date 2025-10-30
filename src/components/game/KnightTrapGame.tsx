@@ -11,7 +11,8 @@ import {
   SHADOW_KNIGHT_RESPAWN_DELAY,
   FREEZE_RUNE_SPAWN_CHANCE,
   FREEZE_RUNE_DURATION,
-  FREEZE_EFFECT_DURATION
+  FREEZE_EFFECT_DURATION,
+  INVENTORY_SIZE
 } from '@/lib/constants';
 import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves, deepCopy, getFurthestEmptySquare } from '@/lib/game-logic';
 import type {
@@ -244,8 +245,10 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     // Check for rune collection
     if (tempFreezeRune && isSamePosition(newPos, tempFreezeRune.position)) {
       playSound('collect');
-      if (!inventory.includes('freeze')) {
+      if (inventory.length < INVENTORY_SIZE && !inventory.includes('freeze')) {
         setInventory(prev => [...prev, 'freeze']);
+      } else if (inventory.length >= INVENTORY_SIZE) {
+        toast({ title: "Inventory Full!", description: "You can't collect any more items." });
       }
       tempFreezeRune = null;
       setFreezeRune(null);
@@ -379,7 +382,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       tempShadowKnights.forEach((knight: ShadowKnight) => {
         if (knight.status === 'respawning' && knight.respawnTurn !== null && nextTurn >= knight.respawnTurn) {
           const occupiedForRespawn = [newPos, ...tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active').map((k: ShadowKnight) => k.position)];
-          const respawnSquare = getFurthestEmptySquare(board, occupiedForRespawn, tempBombs, newPos);
+          const respawnSquare = getFurthestEmptySquare(board, occupiedForRespawn, tempBombs.map(b => b.position), newPos);
           if (respawnSquare) {
             knight.position = respawnSquare;
             knight.status = 'active';
@@ -441,7 +444,6 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
           totalCaptures={totalCaptures}
         />
       </div>
-      <Inventory items={inventory} onUseItem={useItem} />
       <GameBoard
         whiteKnightPos={whiteKnightPos}
         shadowKnights={activeShadowKnights}
@@ -457,6 +459,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         availableMoves={availableMoves}
         freezeRune={freezeRune}
       />
+      <Inventory items={inventory} onUseItem={useItem} />
 
       <GameOverDialog
         isOpen={gameStatus === 'lost'}
