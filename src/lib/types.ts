@@ -26,7 +26,7 @@ export interface ShadowKnight {
   position: Position;
   status: 'active' | 'respawning';
   respawnTurn: number | null;
-  frozenTurnsLeft: number;
+  isFrozen: boolean;
 }
 
 export interface Trail {

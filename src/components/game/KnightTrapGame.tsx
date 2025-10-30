@@ -11,7 +11,7 @@ import {
   SHADOW_KNIGHT_RESPAWN_DELAY,
   FREEZE_RUNE_SPAWN_CHANCE,
   FREEZE_RUNE_DURATION,
-  FREEZE_TURNS
+  FREEZE_EFFECT_DURATION
 } from '@/lib/constants';
 import { isMoveLegal, isSamePosition, getRandomEmptySquare, getValidKnightMoves, deepCopy, getFurthestEmptySquare } from '@/lib/game-logic';
 import type {
@@ -50,12 +50,12 @@ const initializeShadowKnights = (board: BoardSquare[][], whiteKnightPos: Positio
         if (newPos) {
             initialPositions.push(newPos);
             occupied.push(newPos);
-            shadowKnights.push({ id: `shadow-${i + 1}`, position: newPos, status: 'active', respawnTurn: null, frozenTurnsLeft: 0 });
+            shadowKnights.push({ id: `shadow-${i + 1}`, position: newPos, status: 'active', respawnTurn: null, isFrozen: false });
         } else {
             const fallbackPos: Position = [0, i * 7];
             initialPositions.push(fallbackPos);
             occupied.push(fallbackPos);
-            shadowKnights.push({ id: `shadow-${i + 1}`, position: fallbackPos, status: 'active', respawnTurn: null, frozenTurnsLeft: 0 });
+            shadowKnights.push({ id: `shadow-${i + 1}`, position: fallbackPos, status: 'active', respawnTurn: null, isFrozen: false });
         }
     }
     return shadowKnights;
@@ -169,10 +169,17 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     if (item === 'freeze') {
       playSound('freeze');
       setShadowKnights(prev => 
-        prev.map(k => k.status === 'active' ? { ...k, frozenTurnsLeft: FREEZE_TURNS } : k)
+        prev.map(k => k.status === 'active' ? { ...k, isFrozen: true } : k)
       );
       setInventory(prev => prev.filter(i => i !== 'freeze'));
-      toast({ title: "Ice Age!", description: "Shadow Knights are frozen for 5 turns." });
+      toast({ title: "Ice Age!", description: "Shadow Knights are frozen for 5 seconds." });
+
+      setTimeout(() => {
+        setShadowKnights(prev => 
+          prev.map(k => ({ ...k, isFrozen: false }))
+        );
+        toast({ title: "The Thaw!", description: "Shadow Knights are no longer frozen." });
+      }, FREEZE_EFFECT_DURATION);
     }
   };
 
@@ -292,8 +299,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     tempScore += POINTS_PER_MOVE * tempMultiplier;
 
     startAiTransition(async () => {
-      const activeKnightsForAI = tempShadowKnights.filter(k => k.status === 'active' && k.frozenTurnsLeft === 0);
-      const frozenKnights = tempShadowKnights.filter(k => k.frozenTurnsLeft > 0);
+      const activeKnightsForAI = tempShadowKnights.filter(k => k.status === 'active' && !k.isFrozen);
       const oldShadowPositions = activeKnightsForAI.map(k => k.position);
       
       let aiPositions: Position[] = [];
@@ -357,9 +363,6 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
           }
         }
       });
-
-      // Decrement freeze counter
-      frozenKnights.forEach(k => k.frozenTurnsLeft--);
 
       setTrails(prev => [...prev, ...newTrails]);
       

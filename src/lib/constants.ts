@@ -6,4 +6,4 @@ export const POINTS_PER_CAPTURE = 25;
 export const SHADOW_KNIGHT_RESPAWN_DELAY = 3; // in turns
 export const FREEZE_RUNE_SPAWN_CHANCE = 0.15;
 export const FREEZE_RUNE_DURATION = 30000; // 30 seconds
-export const FREEZE_TURNS = 5;
+export const FREEZE_EFFECT_DURATION = 5000; // 5 seconds
