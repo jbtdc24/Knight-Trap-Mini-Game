@@ -10,6 +10,7 @@ import { isSamePosition } from '@/lib/game-logic';
 import Trail from './Trail';
 import FreezeRune from './FreezeRune';
 import { FluxRune } from '../icons/FluxRune';
+import Bomb from './Bomb';
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
@@ -66,6 +67,7 @@ const GameBoard = ({
   whiteKnightPos,
   shadowKnights,
   bombs,
+  bombTransitions,
   explosions,
   explosionMarks,
   trails,
@@ -154,36 +156,10 @@ const GameBoard = ({
       </AnimatePresence>
 
       <AnimatePresence>
-        {bombs.map((bomb) => (
-          <motion.div
-            key={`bomb-${bomb.position[0]}-${bomb.position[1]}`}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.5, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="pointer-events-none absolute h-[12.5%] w-[12.5%] flex items-center justify-center"
-            style={{ top: `${bomb.position[0] * 12.5}%`, left: `${bomb.position[1] * 12.5}%` }}
-          >
-            <motion.img
-              src="/Bomb.png"
-              alt="Bomb"
-              animate={{
-                filter: [
-                  'drop-shadow(0 0 2px #F87171)',
-                  'drop-shadow(0 0 10px #EF4444)',
-                  'drop-shadow(0 0 2px #F87171)',
-                ],
-                scale: [1, 1.1, 1, 0.9, 1],
-                rotate: [0, 5, -5, 5, 0],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            />
-          </motion.div>
-        ))}
+        {bombs.map((bomb) => {
+          const isTransitioning = bombTransitions.find(t => t.id === bomb.id);
+          return <Bomb key={bomb.id} bomb={bomb} isTransitioning={isTransitioning} />;
+        })}
       </AnimatePresence>
 
       <AnimatePresence>

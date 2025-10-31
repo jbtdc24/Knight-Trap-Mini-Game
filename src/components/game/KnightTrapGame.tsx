@@ -73,6 +73,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const [previousShadowKnightPositions, setPreviousShadowKnightPositions] = useState<Position[]>([]);
   const [trails, setTrails] = useState<Trail[]>([]);
   const [bombs, setBombs] = useState<Bomb[]>([]);
+  const [bombTransitions, setBombTransitions] = useState<any[]>([]);
   const [explosions, setExplosions] = useState<Position[]>([]);
   const [explosionMarks, setExplosionMarks] = useState<ExplosionMarkType[]>([]);
   const [score, setScore] = useState(0);
@@ -208,21 +209,25 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         toast({ title: "The Thaw!", description: "Shadow Knights are no longer frozen." });
       }, FREEZE_EFFECT_DURATION);
     } else if (item === 'flux') {
-      playSound('flux'); // You might want to create a new sound for this
-      setBombs(prevBombs => {
-        const newBombs: Bomb[] = [];
-        const occupiedSquares: Position[] = [whiteKnightPos, ...shadowKnights.map(k => k.position)];
-        prevBombs.forEach(bomb => {
-          const newPos = getRandomEmptySquare(board, occupiedSquares, newBombs.map(b => b.position));
-          if (newPos) {
-            newBombs.push({ ...bomb, position: newPos });
-            occupiedSquares.push(newPos);
-          } else {
-            newBombs.push(bomb); // Keep old position if no empty square is found
-          }
-        });
-        return newBombs;
+      playSound('flux');
+      const transitions: any[] = [];
+      const newBombs = bombs.map(bomb => {
+        const from = bomb.position;
+        const to = getRandomEmptySquare(board, [whiteKnightPos, ...shadowKnights.map(k => k.position)], bombs.map(b => b.position));
+        if (to) {
+          transitions.push({ from, to, id: bomb.id });
+          return { ...bomb, position: to };
+        }
+        return bomb;
       });
+  
+      setBombTransitions(transitions);
+  
+      setTimeout(() => {
+        setBombs(newBombs);
+        setBombTransitions([]);
+      }, 500); // Animation duration
+  
       setInventory(prev => {
         const index = prev.indexOf('flux');
         if (index > -1) {
@@ -334,7 +339,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         return;
       }
 
-      tempBombs.push({ position: whiteKnightPos, placedBy: 'white', turnPlaced: turn });
+      tempBombs.push({ id: `${turn}-white`, position: whiteKnightPos, placedBy: 'white', turnPlaced: turn });
       setWhiteKnightPos(newPos);
 
       const capturedKnightIndex = tempShadowKnights.findIndex(
@@ -440,13 +445,13 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
 
         setTrails(prev => [...prev, ...newTrails]);
         
-        oldShadowPositions.forEach((oldPos: Position) => {
+        oldShadowPositions.forEach((oldPos: Position, index: number) => {
           const wasDestroyedByBomb = destroyedKnightOriginalPositions.some(destroyedPos => isSamePosition(destroyedPos, oldPos));
           const capturedKnightInfo = shadowKnights[capturedKnightIndex];
           const wasCapturedByPlayer = capturedKnightIndex > -1 && capturedKnightInfo && isSamePosition(capturedKnightInfo.position, oldPos);
 
           if (!wasDestroyedByBomb && !wasCapturedByPlayer) {
-              tempBombs.push({ position: oldPos, placedBy: 'shadow', turnPlaced: turn });
+              tempBombs.push({ id: `${turn}-shadow-${index}`, position: oldPos, placedBy: 'shadow', turnPlaced: turn });
           }
         });
         
@@ -524,6 +529,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         whiteKnightPos={whiteKnightPos}
         shadowKnights={activeShadowKnights}
         bombs={bombs}
+        bombTransitions={bombTransitions}
         explosions={explosions}
         explosionMarks={explosionMarks}
         trails={trails}
