@@ -172,7 +172,15 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       setShadowKnights(prev => 
         prev.map(k => k.status === 'active' ? { ...k, isFrozen: true } : k)
       );
-      setInventory(prev => prev.filter(i => i !== 'freeze'));
+      setInventory(prev => {
+        const index = prev.indexOf('freeze');
+        if (index > -1) {
+          const newInventory = [...prev];
+          newInventory.splice(index, 1);
+          return newInventory;
+        }
+        return prev;
+      });
       toast({ title: "Ice Age!", description: "Shadow Knights are frozen for 5 seconds." });
 
       setTimeout(() => {
@@ -245,7 +253,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     // Check for rune collection
     if (tempFreezeRune && isSamePosition(newPos, tempFreezeRune.position)) {
       playSound('collect');
-      if (inventory.length < INVENTORY_SIZE && !inventory.includes('freeze')) {
+      if (inventory.length < INVENTORY_SIZE) {
         setInventory(prev => [...prev, 'freeze']);
       } else if (inventory.length >= INVENTORY_SIZE) {
         toast({ title: "Inventory Full!", description: "You can't collect any more items." });
