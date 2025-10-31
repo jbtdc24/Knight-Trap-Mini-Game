@@ -89,6 +89,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const [availableMoves, setAvailableMoves] = useState<Position[]>([]);
   const [freezeRune, setFreezeRune] = useState<FreezeRuneType | null>(null);
   const [inventory, setInventory] = useState<string[]>([]);
+  const [runeCollecting, setRuneCollecting] = useState<Position | null>(null);
+  const [collectingItemType, setCollectingItemType] = useState<string | null>(null);
 
   useEffect(() => {
     if (gameStatus === 'playing' && totalCaptures < 6) {
@@ -131,6 +133,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     setMultiplier(1);
     setFreezeRune(null);
     setInventory([]);
+    setRuneCollecting(null);
+    setCollectingItemType(null);
     playSound('startGame');
     setGameStatus('playing');
   }, [playSound]);
@@ -190,6 +194,16 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         toast({ title: "The Thaw!", description: "Shadow Knights are no longer frozen." });
       }, FREEZE_EFFECT_DURATION);
     }
+  };
+  
+  const handleRuneAnimationComplete = () => {
+    if (collectingItemType) {
+      if (inventory.length < INVENTORY_SIZE) {
+        setInventory(prev => [...prev, collectingItemType]);
+      }
+    }
+    setRuneCollecting(null);
+    setCollectingItemType(null);
   };
 
   useEffect(() => {
@@ -254,183 +268,183 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     if (tempFreezeRune && isSamePosition(newPos, tempFreezeRune.position)) {
       playSound('collect');
       if (inventory.length < INVENTORY_SIZE) {
-        setInventory(prev => [...prev, 'freeze']);
-      } else if (inventory.length >= INVENTORY_SIZE) {
+        setRuneCollecting(tempFreezeRune.position);
+        setCollectingItemType('freeze');
+      } else {
         toast({ title: "Inventory Full!", description: "You can't collect any more items." });
       }
-      tempFreezeRune = null;
       setFreezeRune(null);
-    }
+    } else {
+      const landingOnBombIndex = tempBombs.findIndex((bomb: Bomb) => isSamePosition(bomb.position, newPos));
+      if (landingOnBombIndex > -1) {
+        setWhiteKnightPos(newPos);
+        triggerExplosion(newPos);
+        setBombs(bombs.filter((b: Bomb) => !isSamePosition(b.position, newPos)));
+        setTimeout(() => handleGameOver('bomb'), 500);
+        return;
+      }
 
-    const landingOnBombIndex = tempBombs.findIndex((bomb: Bomb) => isSamePosition(bomb.position, newPos));
-    if (landingOnBombIndex > -1) {
+      tempBombs.push({ position: whiteKnightPos, placedBy: 'white', turnPlaced: turn });
       setWhiteKnightPos(newPos);
-      triggerExplosion(newPos);
-      setBombs(bombs.filter((b: Bomb) => !isSamePosition(b.position, newPos)));
-      setTimeout(() => handleGameOver('bomb'), 500);
-      return;
-    }
 
-    tempBombs.push({ position: whiteKnightPos, placedBy: 'white', turnPlaced: turn });
-    setWhiteKnightPos(newPos);
+      const capturedKnightIndex = tempShadowKnights.findIndex(
+        (k: ShadowKnight) => k.status === 'active' && isSamePosition(k.position, newPos)
+      );
 
-    const capturedKnightIndex = tempShadowKnights.findIndex(
-      (k: ShadowKnight) => k.status === 'active' && isSamePosition(k.position, newPos)
-    );
+      if (capturedKnightIndex > -1) {
+        playSound('capture');
+        tempTotalCaptures++;
+        const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
+        tempScore += POINTS_PER_CAPTURE * tempMultiplier;
+        tempBombDuration++;
 
-    if (capturedKnightIndex > -1) {
-      playSound('capture');
-      tempTotalCaptures++;
-      const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
-      tempScore += POINTS_PER_CAPTURE * tempMultiplier;
-      tempBombDuration++;
-
-      if (newMultiplier > tempMultiplier) {
-        playSound('levelUp');
-        toast({
-          title: `Shadow Knight Captured!`,
-          description: `Multiplier is now ${newMultiplier}x! Bomb duration is ${tempBombDuration}!`,
-        });
-        tempMultiplier = newMultiplier;
-      } else {
-        toast({
-          title: `Shadow Knight Captured!`,
-          description: `Bomb duration increased to ${tempBombDuration}!`,
-        });
+        if (newMultiplier > tempMultiplier) {
+          playSound('levelUp');
+          toast({
+            title: `Shadow Knight Captured!`,
+            description: `Multiplier is now ${newMultiplier}x! Bomb duration is ${tempBombDuration}!`,
+          });
+          tempMultiplier = newMultiplier;
+        } else {
+          toast({
+            title: `Shadow Knight Captured!`,
+            description: `Bomb duration increased to ${tempBombDuration}!`,
+          });
+        }
+        
+        const knightToRespawn = tempShadowKnights[capturedKnightIndex];
+        if(knightToRespawn) {
+          triggerVisualExplosion(knightToRespawn.position);
+          knightToRespawn.status = 'respawning';
+          knightToRespawn.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
+        }
       }
       
-      const knightToRespawn = tempShadowKnights[capturedKnightIndex];
-      if(knightToRespawn) {
-        triggerVisualExplosion(knightToRespawn.position);
-        knightToRespawn.status = 'respawning';
-        knightToRespawn.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
-      }
-    }
-    
-    tempScore += POINTS_PER_MOVE * tempMultiplier;
+      tempScore += POINTS_PER_MOVE * tempMultiplier;
 
-    startAiTransition(async () => {
-      const activeKnightsForAI = tempShadowKnights.filter(k => k.status === 'active' && !k.isFrozen);
-      const oldShadowPositions = activeKnightsForAI.map(k => k.position);
-      
-      let aiPositions: Position[] = [];
-      if (activeKnightsForAI.length > 0) {
-        const { newPositions } = await getShadowKnightMoves(
-          newPos, 
-          oldShadowPositions, 
-          board, 
-          tempBombs, 
-          nextTurn,
-          previousShadowKnightPositions
-        );
-        aiPositions = newPositions;
-      }
-      
-      setPreviousShadowKnightPositions(oldShadowPositions);
+      startAiTransition(async () => {
+        const activeKnightsForAI = tempShadowKnights.filter(k => k.status === 'active' && !k.isFrozen);
+        const oldShadowPositions = activeKnightsForAI.map(k => k.position);
+        
+        let aiPositions: Position[] = [];
+        if (activeKnightsForAI.length > 0) {
+          const { newPositions } = await getShadowKnightMoves(
+            newPos, 
+            oldShadowPositions, 
+            board, 
+            tempBombs, 
+            nextTurn,
+            previousShadowKnightPositions
+          );
+          aiPositions = newPositions;
+        }
+        
+        setPreviousShadowKnightPositions(oldShadowPositions);
 
-      if (aiPositions.length > 0) {
-        playSound('shadowMove');
-      }
+        if (aiPositions.length > 0) {
+          playSound('shadowMove');
+        }
 
-      const newTrails: Trail[] = [];
-      const destroyedKnightOriginalPositions: Position[] = [];
+        const newTrails: Trail[] = [];
+        const destroyedKnightOriginalPositions: Position[] = [];
 
-      aiPositions.forEach((newAiPos: Position, index: number) => {
-        const knightId = activeKnightsForAI[index]?.id;
-        const knightInState = tempShadowKnights.find((k: ShadowKnight) => k.id === knightId);
+        aiPositions.forEach((newAiPos: Position, index: number) => {
+          const knightId = activeKnightsForAI[index]?.id;
+          const knightInState = tempShadowKnights.find((k: ShadowKnight) => k.id === knightId);
 
-        if (knightInState) {
-          const oldPos = knightInState.position;
-          const isBomb = tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, newAiPos));
-          if (isBomb) {
-            tempBombs = tempBombs.filter((b: Bomb) => !isSamePosition(b.position, newAiPos));
-            destroyedKnightOriginalPositions.push(knightInState.position);
-            triggerExplosion(newAiPos);
-            knightInState.status = 'respawning';
-            knightInState.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
-            
-            tempTotalCaptures++;
-            const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
-            tempScore += POINTS_PER_CAPTURE * tempMultiplier;
-            tempBombDuration++;
+          if (knightInState) {
+            const oldPos = knightInState.position;
+            const isBomb = tempBombs.some((bomb: Bomb) => isSamePosition(bomb.position, newAiPos));
+            if (isBomb) {
+              tempBombs = tempBombs.filter((b: Bomb) => !isSamePosition(b.position, newAiPos));
+              destroyedKnightOriginalPositions.push(knightInState.position);
+              triggerExplosion(newAiPos);
+              knightInState.status = 'respawning';
+              knightInState.respawnTurn = nextTurn + SHADOW_KNIGHT_RESPAWN_DELAY;
+              
+              tempTotalCaptures++;
+              const newMultiplier = 1 + Math.floor(tempTotalCaptures / 2);
+              tempScore += POINTS_PER_CAPTURE * tempMultiplier;
+              tempBombDuration++;
 
-            if (newMultiplier > tempMultiplier) {
-              playSound('levelUp');
-              toast({
-                title: `A Shadow Knight fell into a trap!`,
-                description: `Multiplier up to ${newMultiplier}x! Bomb duration increased.`,
-              });
-              tempMultiplier = newMultiplier;
+              if (newMultiplier > tempMultiplier) {
+                playSound('levelUp');
+                toast({
+                  title: `A Shadow Knight fell into a trap!`,
+                  description: `Multiplier up to ${newMultiplier}x! Bomb duration increased.`,
+                });
+                tempMultiplier = newMultiplier;
+              } else {
+                toast({
+                  title: `A Shadow Knight fell into a trap!`,
+                  description: `Bomb duration increased.`,
+                });
+              }
+
             } else {
-              toast({
-                title: `A Shadow Knight fell into a trap!`,
-                description: `Bomb duration increased.`,
-              });
+              newTrails.push({ id: knightId, path: [oldPos, newAiPos] });
+              knightInState.position = newAiPos;
             }
+          }
+        });
 
-          } else {
-            newTrails.push({ id: knightId, path: [oldPos, newAiPos] });
-            knightInState.position = newAiPos;
+        setTrails(prev => [...prev, ...newTrails]);
+        
+        oldShadowPositions.forEach((oldPos: Position) => {
+          const wasDestroyedByBomb = destroyedKnightOriginalPositions.some(destroyedPos => isSamePosition(destroyedPos, oldPos));
+          const capturedKnightInfo = shadowKnights[capturedKnightIndex];
+          const wasCapturedByPlayer = capturedKnightIndex > -1 && capturedKnightInfo && isSamePosition(capturedKnightInfo.position, oldPos);
+
+          if (!wasDestroyedByBomb && !wasCapturedByPlayer) {
+              tempBombs.push({ position: oldPos, placedBy: 'shadow', turnPlaced: turn });
+          }
+        });
+        
+        tempShadowKnights.forEach((knight: ShadowKnight) => {
+          if (knight.status === 'respawning' && knight.respawnTurn !== null && nextTurn >= knight.respawnTurn) {
+            const occupiedForRespawn = [newPos, ...tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active').map((k: ShadowKnight) => k.position)];
+            const respawnSquare = getFurthestEmptySquare(board, occupiedForRespawn, tempBombs.map(b => b.position), newPos);
+            if (respawnSquare) {
+              knight.position = respawnSquare;
+              knight.status = 'active';
+              knight.respawnTurn = null;
+            }
+          }
+        });
+
+        // Rune Spawning Logic
+        if (tempTotalCaptures > 0 && !freezeRune && !runeCollecting && Math.random() < FREEZE_RUNE_SPAWN_CHANCE) {
+          const occupiedForRune = [newPos, ...tempShadowKnights.map(k => k.position)];
+          const runePos = getRandomEmptySquare(board, occupiedForRune, tempBombs.map(b => b.position));
+          if (runePos) {
+            setFreezeRune({ position: runePos, id: Date.now().toString() });
           }
         }
-      });
+        
+        setScore(tempScore);
+        setTotalCaptures(tempTotalCaptures);
+        setMultiplier(tempMultiplier);
+        setBombDuration(tempBombDuration);
+        setShadowKnights(tempShadowKnights);
+        const turnCutoff = nextTurn - tempBombDuration;
+        setBombs(tempBombs.filter((b: Bomb) => b.turnPlaced >= turnCutoff));
+        setTurn(nextTurn);
 
-      setTrails(prev => [...prev, ...newTrails]);
-      
-      oldShadowPositions.forEach((oldPos: Position) => {
-        const wasDestroyedByBomb = destroyedKnightOriginalPositions.some(destroyedPos => isSamePosition(destroyedPos, oldPos));
-        const capturedKnightInfo = shadowKnights[capturedKnightIndex];
-        const wasCapturedByPlayer = capturedKnightIndex > -1 && capturedKnightInfo && isSamePosition(capturedKnightInfo.position, oldPos);
+        const activeAfterRespawn = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
+        if (activeAfterRespawn.some((p: ShadowKnight) => isSamePosition(p.position, newPos))) {
+          setTimeout(() => handleGameOver('captured'), 500);
+          return;
+        }
+        
+        const finalAllPiecePositions = [newPos, ...activeAfterRespawn.map((k: ShadowKnight) => k.position)];
+        const validPlayerMoves = getValidKnightMoves(newPos, board, finalAllPiecePositions);
 
-        if (!wasDestroyedByBomb && !wasCapturedByPlayer) {
-            tempBombs.push({ position: oldPos, placedBy: 'shadow', turnPlaced: turn });
+        if (validPlayerMoves.length === 0) {
+          setTimeout(() => handleGameOver('trapped'), 500);
+          return;
         }
       });
-      
-      tempShadowKnights.forEach((knight: ShadowKnight) => {
-        if (knight.status === 'respawning' && knight.respawnTurn !== null && nextTurn >= knight.respawnTurn) {
-          const occupiedForRespawn = [newPos, ...tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active').map((k: ShadowKnight) => k.position)];
-          const respawnSquare = getFurthestEmptySquare(board, occupiedForRespawn, tempBombs.map(b => b.position), newPos);
-          if (respawnSquare) {
-            knight.position = respawnSquare;
-            knight.status = 'active';
-            knight.respawnTurn = null;
-          }
-        }
-      });
-
-      // Rune Spawning Logic
-      if (tempTotalCaptures > 0 && !tempFreezeRune && Math.random() < FREEZE_RUNE_SPAWN_CHANCE) {
-        const occupiedForRune = [newPos, ...tempShadowKnights.map(k => k.position)];
-        const runePos = getRandomEmptySquare(board, occupiedForRune, tempBombs.map(b => b.position));
-        if (runePos) {
-          setFreezeRune({ position: runePos, id: Date.now().toString() });
-        }
-      }
-      
-      setScore(tempScore);
-      setTotalCaptures(tempTotalCaptures);
-      setMultiplier(tempMultiplier);
-      setBombDuration(tempBombDuration);
-      setShadowKnights(tempShadowKnights);
-      const turnCutoff = nextTurn - tempBombDuration;
-      setBombs(tempBombs.filter((b: Bomb) => b.turnPlaced >= turnCutoff));
-      setTurn(nextTurn);
-
-      const activeAfterRespawn = tempShadowKnights.filter((k: ShadowKnight) => k.status === 'active');
-      if (activeAfterRespawn.some((p: ShadowKnight) => isSamePosition(p.position, newPos))) {
-        setTimeout(() => handleGameOver('captured'), 500);
-        return;
-      }
-      
-      const finalAllPiecePositions = [newPos, ...activeAfterRespawn.map((k: ShadowKnight) => k.position)];
-      const validPlayerMoves = getValidKnightMoves(newPos, board, finalAllPiecePositions);
-
-      if (validPlayerMoves.length === 0) {
-        setTimeout(() => handleGameOver('trapped'), 500);
-        return;
-      }
-    });
+    }
   };
   
   const activeShadowKnights = shadowKnights.filter(k => k.status === 'active');
@@ -466,6 +480,8 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         illegalMovePos={illegalMovePos}
         availableMoves={availableMoves}
         freezeRune={freezeRune}
+        runeCollecting={runeCollecting}
+        onRuneAnimationComplete={handleRuneAnimationComplete}
       />
       <Inventory items={inventory} onUseItem={useItem} />
 

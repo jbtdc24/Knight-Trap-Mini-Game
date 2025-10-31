@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType, Trail as TrailType, FreezeRune as FreezeRuneType } from '@/lib/types';
+import type { GameBoardProps } from '@/lib/types';
 import { KnightIcon } from '../icons/KnightIcon';
 import { ShadowKnightIcon } from '../icons/ShadowKnightIcon';
 import { Explosion } from '../icons/Explosion';
@@ -18,22 +18,6 @@ function usePrevious<T>(value: T): T | undefined {
   });
   return ref.current;
 }
-
-type GameBoardProps = {
-  whiteKnightPos: Position;
-  shadowKnights: ShadowKnight[];
-  bombs: Bomb[];
-  explosions: Position[];
-  explosionMarks: ExplosionMarkType[];
-  trails: TrailType[];
-  onMove: (pos: Position) => void;
-  gameStatus: GameStatus;
-  isAiThinking: boolean;
-  boardShake: number;
-  illegalMovePos: Position | null;
-  availableMoves: Position[];
-  freezeRune: FreezeRuneType | null;
-};
 
 const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   if (!from || (to && isSamePosition(from, to))) {
@@ -90,7 +74,9 @@ const GameBoard = ({
   boardShake,
   illegalMovePos,
   availableMoves,
-  freezeRune
+  freezeRune,
+  runeCollecting,
+  onRuneAnimationComplete,
 }: GameBoardProps) => {
   const prevWhiteKnightPos = usePrevious(whiteKnightPos);
   const prevShadowKnights = usePrevious(shadowKnights);
@@ -198,7 +184,31 @@ const GameBoard = ({
       </AnimatePresence>
 
       <AnimatePresence>
-        {freezeRune && (
+        {runeCollecting && (
+          <motion.div
+            key="rune-collecting"
+            className="absolute h-[12.5%] w-[12.5%] z-30"
+            initial={{
+              top: `${runeCollecting[0] * 12.5}%`,
+              left: `${runeCollecting[1] * 12.5}%`,
+              scale: 1,
+            }}
+            animate={{
+              top: `100%`,
+              left: `45%`,
+              scale: 0.2,
+              opacity: 0.5,
+            }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            onAnimationComplete={onRuneAnimationComplete}
+          >
+            <FreezeRune />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {freezeRune && !runeCollecting && (
           <motion.div
             key={freezeRune.id}
             className="absolute h-[12.5%] w-[12.5%]"
