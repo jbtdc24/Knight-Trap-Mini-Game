@@ -8,7 +8,6 @@ const FreezeRune = () => {
       <motion.img
         src="/FreezeRune.png"
         alt="Freeze Rune"
-        className="h-full w-full"
         animate={{
           scale: [1, 1.1, 1],
           filter: [

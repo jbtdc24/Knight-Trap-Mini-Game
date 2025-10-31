@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { GameBoardProps } from '@/lib/types';
+import type { GameBoardProps, Position } from '@/lib/types';
 import { KnightIcon } from '../icons/KnightIcon';
 import { ShadowKnightIcon } from '../icons/ShadowKnightIcon';
 import { Explosion } from '../icons/Explosion';
@@ -9,6 +9,7 @@ import { useEffect, useRef } from 'react';
 import { isSamePosition } from '@/lib/game-logic';
 import Trail from './Trail';
 import FreezeRune from './FreezeRune';
+import { FluxRune } from '../icons/FluxRune';
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
@@ -75,8 +76,10 @@ const GameBoard = ({
   illegalMovePos,
   availableMoves,
   freezeRune,
+  fluxRune,
   runeCollecting,
   onRuneAnimationComplete,
+  collectingItemType
 }: GameBoardProps) => {
   const prevWhiteKnightPos = usePrevious(whiteKnightPos);
   const prevShadowKnights = usePrevious(shadowKnights);
@@ -202,7 +205,8 @@ const GameBoard = ({
             transition={{ duration: 0.8, ease: "easeInOut" }}
             onAnimationComplete={onRuneAnimationComplete}
           >
-            <FreezeRune />
+            {collectingItemType === 'freeze' && <FreezeRune />}
+            {collectingItemType === 'flux' && <FluxRune />}
           </motion.div>
         )}
       </AnimatePresence>
@@ -218,6 +222,21 @@ const GameBoard = ({
             exit={{ opacity: 0, scale: 0.5 }}
           >
             <FreezeRune />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {fluxRune && !runeCollecting && (
+          <motion.div
+            key={fluxRune.id}
+            className="absolute h-[12.5%] w-[12.5%]"
+            style={{ top: `${fluxRune.position[0] * 12.5}%`, left: `${fluxRune.position[1] * 12.5}%` }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+          >
+            <FluxRune />
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,4 +1,3 @@
-
 export type Position = [number, number];
 export type GameStatus = 'starting' | 'playing' | 'lost';
 export type BoardSquare = { type: 'empty' | 'bomb' };
@@ -14,6 +13,7 @@ export type ShadowKnight = {
 export type ExplosionMark = { position: Position; id: string };
 export type Trail = { id: string | number; path: Position[] };
 export type FreezeRune = { position: Position; id: string };
+export type FluxRune = { position: Position; id: string };
 
 export interface GameBoardProps {
   whiteKnightPos: Position;
@@ -29,6 +29,8 @@ export interface GameBoardProps {
   illegalMovePos: Position | null;
   availableMoves: Position[];
   freezeRune: FreezeRune | null;
+  fluxRune: FluxRune | null;
   runeCollecting: Position | null;
   onRuneAnimationComplete: () => void;
+  collectingItemType: string | null;
 }

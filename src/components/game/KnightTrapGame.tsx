@@ -10,7 +10,9 @@ import {
   POINTS_PER_CAPTURE,
   SHADOW_KNIGHT_RESPAWN_DELAY,
   FREEZE_RUNE_SPAWN_CHANCE,
+  FLUX_RUNE_SPAWN_CHANCE,
   FREEZE_RUNE_DURATION,
+  FLUX_RUNE_DURATION,
   FREEZE_EFFECT_DURATION,
   INVENTORY_SIZE
 } from '@/lib/constants';
@@ -24,7 +26,8 @@ import type {
   ShadowKnight,
   ExplosionMark as ExplosionMarkType,
   Trail,
-  FreezeRune as FreezeRuneType
+  FreezeRune as FreezeRuneType,
+  FluxRune as FluxRuneType
 } from '@/lib/types';
 import GameBoard from './GameBoard';
 import GameTopBar from './GameTopBar';
@@ -88,6 +91,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
   const { musicVolume } = useAudio();
   const [availableMoves, setAvailableMoves] = useState<Position[]>([]);
   const [freezeRune, setFreezeRune] = useState<FreezeRuneType | null>(null);
+  const [fluxRune, setFluxRune] = useState<FluxRuneType | null>(null);
   const [inventory, setInventory] = useState<string[]>([]);
   const [runeCollecting, setRuneCollecting] = useState<Position | null>(null);
   const [collectingItemType, setCollectingItemType] = useState<string | null>(null);
@@ -132,6 +136,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     setTotalCaptures(0);
     setMultiplier(1);
     setFreezeRune(null);
+    setFluxRune(null);
     setInventory([]);
     setRuneCollecting(null);
     setCollectingItemType(null);
@@ -158,6 +163,15 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       return () => clearTimeout(timer);
     }
   }, [freezeRune, gameStatus]);
+
+  useEffect(() => {
+    if (fluxRune && gameStatus === 'playing') {
+      const timer = setTimeout(() => {
+        setFluxRune(null);
+      }, FLUX_RUNE_DURATION);
+      return () => clearTimeout(timer);
+    }
+  }, [fluxRune, gameStatus]);
 
   const triggerVisualExplosion = useCallback((pos: Position) => {
     setExplosions(prev => [...prev, pos]);
@@ -193,6 +207,32 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         );
         toast({ title: "The Thaw!", description: "Shadow Knights are no longer frozen." });
       }, FREEZE_EFFECT_DURATION);
+    } else if (item === 'flux') {
+      playSound('flux'); // You might want to create a new sound for this
+      setBombs(prevBombs => {
+        const newBombs: Bomb[] = [];
+        const occupiedSquares: Position[] = [whiteKnightPos, ...shadowKnights.map(k => k.position)];
+        prevBombs.forEach(bomb => {
+          const newPos = getRandomEmptySquare(board, occupiedSquares, newBombs.map(b => b.position));
+          if (newPos) {
+            newBombs.push({ ...bomb, position: newPos });
+            occupiedSquares.push(newPos);
+          } else {
+            newBombs.push(bomb); // Keep old position if no empty square is found
+          }
+        });
+        return newBombs;
+      });
+      setInventory(prev => {
+        const index = prev.indexOf('flux');
+        if (index > -1) {
+          const newInventory = [...prev];
+          newInventory.splice(index, 1);
+          return newInventory;
+        }
+        return prev;
+      });
+      toast({ title: "Rune of Flux Activated!", description: "Bombs have been shuffled!" });
     }
   };
   
@@ -263,6 +303,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     let tempShadowKnights = deepCopy(shadowKnights);
     let tempBombs = deepCopy(bombs);
     let tempFreezeRune = deepCopy(freezeRune);
+    let tempFluxRune = deepCopy(fluxRune);
 
     // Check for rune collection
     if (tempFreezeRune && isSamePosition(newPos, tempFreezeRune.position)) {
@@ -274,6 +315,15 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         toast({ title: "Inventory Full!", description: "You can't collect any more items." });
       }
       setFreezeRune(null);
+    } else if (tempFluxRune && isSamePosition(newPos, tempFluxRune.position)) {
+      playSound('collect');
+      if (inventory.length < INVENTORY_SIZE) {
+        setRuneCollecting(tempFluxRune.position);
+        setCollectingItemType('flux');
+      } else {
+        toast({ title: "Inventory Full!", description: "You can't collect any more items." });
+      }
+      setFluxRune(null);
     } else {
       const landingOnBombIndex = tempBombs.findIndex((bomb: Bomb) => isSamePosition(bomb.position, newPos));
       if (landingOnBombIndex > -1) {
@@ -413,11 +463,15 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         });
 
         // Rune Spawning Logic
-        if (tempTotalCaptures > 0 && !freezeRune && !runeCollecting && Math.random() < FREEZE_RUNE_SPAWN_CHANCE) {
+        if (tempTotalCaptures > 0 && !freezeRune && !fluxRune && !runeCollecting) {
           const occupiedForRune = [newPos, ...tempShadowKnights.map(k => k.position)];
           const runePos = getRandomEmptySquare(board, occupiedForRune, tempBombs.map(b => b.position));
           if (runePos) {
-            setFreezeRune({ position: runePos, id: Date.now().toString() });
+            if (Math.random() < FREEZE_RUNE_SPAWN_CHANCE) {
+              setFreezeRune({ position: runePos, id: Date.now().toString() });
+            } else if (Math.random() < FLUX_RUNE_SPAWN_CHANCE) {
+              setFluxRune({ position: runePos, id: Date.now().toString() });
+            }
           }
         }
         
@@ -480,8 +534,10 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
         illegalMovePos={illegalMovePos}
         availableMoves={availableMoves}
         freezeRune={freezeRune}
+        fluxRune={fluxRune}
         runeCollecting={runeCollecting}
         onRuneAnimationComplete={handleRuneAnimationComplete}
+        collectingItemType={collectingItemType}
       />
       <Inventory items={inventory} onUseItem={useItem} />
 
