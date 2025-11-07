@@ -211,14 +211,20 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
     } else if (item === 'flux') {
       playSound('flux');
       const transitions: any[] = [];
-      const newBombs = bombs.map(bomb => {
+      const newBombs: Bomb[] = [];
+      const newBombPositions: Position[] = [];
+      const staticOccupied = [whiteKnightPos, ...shadowKnights.map(k => k.position)];
+
+      bombs.forEach(bomb => {
         const from = bomb.position;
-        const to = getRandomEmptySquare(board, [whiteKnightPos, ...shadowKnights.map(k => k.position)], bombs.map(b => b.position));
+        const to = getRandomEmptySquare(board, [...staticOccupied, ...newBombPositions]);
         if (to) {
           transitions.push({ from, to, id: bomb.id });
-          return { ...bomb, position: to };
+          newBombs.push({ ...bomb, position: to });
+          newBombPositions.push(to);
+        } else {
+          newBombs.push(bomb);
         }
-        return bomb;
       });
   
       setBombTransitions(transitions);
@@ -226,7 +232,7 @@ export default function KnightTrapGame({ onReturnToHome }: { onReturnToHome: () 
       setTimeout(() => {
         setBombs(newBombs);
         setBombTransitions([]);
-      }, 500); // Animation duration
+      }, 500);
   
       setInventory(prev => {
         const index = prev.indexOf('flux');
