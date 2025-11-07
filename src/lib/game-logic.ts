@@ -12,6 +12,7 @@ export const isOutOfBounds = (pos: Position): boolean => {
 };
 
 export const isSamePosition = (pos1: Position, pos2: Position): boolean => {
+  if (!pos1 || !pos2) return false;
   return pos1[0] === pos2[0] && pos1[1] === pos2[1];
 }
 
@@ -49,10 +50,9 @@ export const isMoveLegal = (
 export const getRandomEmptySquare = (
   board: BoardSquare[][],
   occupiedPositions: Position[],
-  bombs?: Bomb[]
+  bombPositions: Position[] = []
 ): Position | null => {
   const emptySquares: Position[] = [];
-  const bombPositions = bombs ? bombs.map(b => b.position) : [];
 
   for (let i = 0; i < BOARD_SIZE; i++) {
     for (let j = 0; j < BOARD_SIZE; j++) {
@@ -80,13 +80,11 @@ export function deepCopy<T>(obj: T): T {
 export const getFurthestEmptySquare = (
     board: BoardSquare[][],
     occupiedPositions: Position[],
-    bombs: Bomb[],
+    bombPositions: Position[],
     referencePosition: Position
 ): Position | null => {
     let furthestSquare: Position | null = null;
     let maxDist = -1;
-
-    const bombPositions = bombs.map(b => b.position);
 
     for (let i = 0; i < BOARD_SIZE; i++) {
         for (let j = 0; j < BOARD_SIZE; j++) {

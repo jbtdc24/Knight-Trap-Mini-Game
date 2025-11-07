@@ -92,7 +92,7 @@ const chartOptions: ChartOptions = {
 
 export default function HowToPlayDialog({ onClose }: { onClose: () => void }) {
     const multiplierCanvasRef = useRef<HTMLCanvasElement>(null);
-    const bombCanvasRef = useRef<HTMLCanvasElement>(null);
+    const bombCanvasRef = useRef<HTMLCanvasElement>(-1);
 
     useEffect(() => {
         let multiplierChartInstance: Chart | null = null;
@@ -305,8 +305,25 @@ export default function HowToPlayDialog({ onClose }: { onClose: () => void }) {
                         </div>
                     </section>
 
+<section className="md:col-span-2 bg-gray-800 rounded-lg shadow-xl p-6">
+    <h2 className="text-2xl font-bold text-white mb-4">5. Power-Up Runes</h2>
+    <p className="text-md text-gray-300 mb-6">
+        After capturing at least one Shadow Knight, special runes have a chance to spawn on the board. Move your knight over a rune to collect it into your inventory (max 4). Click on an item in your inventory to use it.
+    </p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-gray-900 p-4 rounded-lg shadow-md">
+            <h3 className="font-bold text-lg text-cyan-400">Rune of Freeze</h3>
+            <p className="text-gray-300">When used, this rune temporarily freezes both Shadow Knights for 5 seconds, allowing you to reposition, set traps, or escape a dangerous situation.</p>
+        </div>
+        <div className="bg-gray-900 p-4 rounded-lg shadow-md">
+            <h3 className="font-bold text-lg text-purple-400">Rune of Flux</h3>
+            <p className="text-gray-300">Activating this rune immediately shuffles the positions of all active bombs on the board to new, random, and unoccupied squares, potentially clearing your path or creating new traps for the AI.</p>
+        </div>
+    </div>
+</section>
+
                     <section className="bg-gray-800 rounded-lg shadow-xl p-6">
-                        <h2 className="text-2xl font-bold text-white mb-4">5. Player Input & Guides</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">6. Player Input & Guides</h2>
                         <p className="text-sm text-gray-300 mb-6">
                             The controls are simple, but the visual aids are temporary.
                         </p>
@@ -336,7 +353,7 @@ export default function HowToPlayDialog({ onClose }: { onClose: () => void }) {
                     </section>
 
                     <section className="bg-gray-800 rounded-lg shadow-xl p-6">
-                        <h2 className="text-2xl font-bold text-white mb-4">6. Inevitable Doom</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">7. Inevitable Doom</h2>
                         <p className="text-sm text-gray-300 mb-6">
                             The game ends instantly if any of these three conditions are met.
                         </p>
