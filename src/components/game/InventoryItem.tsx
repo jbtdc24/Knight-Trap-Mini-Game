@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import FreezeRune from './FreezeRune';
-import { FluxRune } from '../icons/FluxRune';
+import FluxRune from './FluxRune';
 
 const itemMap: { [key: string]: React.ComponentType } = {
   freeze: FreezeRune,

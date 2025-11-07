@@ -9,7 +9,7 @@ import { useEffect, useRef } from 'react';
 import { isSamePosition } from '@/lib/game-logic';
 import Trail from './Trail';
 import FreezeRune from './FreezeRune';
-import { FluxRune } from '../icons/FluxRune';
+import FluxRune from './FluxRune';
 import Bomb from './Bomb';
 
 // Custom hook to get the previous value of a prop or state
