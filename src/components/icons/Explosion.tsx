@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 export const Explosion = () => (
   <motion.div
@@ -7,6 +8,12 @@ export const Explosion = () => (
     transition={{ duration: 0.4, ease: 'easeOut' }}
     className="absolute inset-0 z-10 flex items-center justify-center"
   >
-    <div className="h-full w-full rounded-full bg-accent opacity-80" />
+    <Image
+      src="/explosion-mark.png"
+      alt="Explosion"
+      width={60}
+      height={60}
+      className="object-contain"
+    />
   </motion.div>
 );

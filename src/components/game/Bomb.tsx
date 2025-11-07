@@ -3,7 +3,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BOARD_SIZE } from '@/lib/constants';
-import type { Bomb as BombType } from '@/lib/types';
+import type { Bomb as BombType, Position } from '@/lib/types';
+import Image from 'next/image';
 
 interface BombProps {
   bomb: BombType;
@@ -18,6 +19,9 @@ const Bomb = ({ bomb, isTransitioning }: BombProps) => {
     <motion.div
       key={bomb.id}
       className="absolute"
+      style={{
+        filter: 'drop-shadow(0 0 0.5rem crimson)',
+      }}
       initial={{
         left: `${(initialPosition[1] / BOARD_SIZE) * 100}%`,
         top: `${(initialPosition[0] / BOARD_SIZE) * 100}%`,
@@ -27,11 +31,25 @@ const Bomb = ({ bomb, isTransitioning }: BombProps) => {
       animate={{
         left: `${(animatePosition[1] / BOARD_SIZE) * 100}%`,
         top: `${(animatePosition[0] / BOARD_SIZE) * 100}%`,
+        scale: [1, 1.05, 1],
       }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
+      transition={{
+        duration: 0.5,
+        ease: "easeInOut",
+        scale: {
+          repeat: Infinity,
+          duration: 1,
+          ease: 'easeInOut',
+        },
+      }}
     >
       <div className="w-full h-full flex items-center justify-center">
-        <div className="w-3/4 h-3/4 bg-gray-700 rounded-full" />
+        <Image
+          src="/Bomb.png"
+          alt="Bomb"
+          layout="fill"
+          className="object-contain"
+        />
       </div>
     </motion.div>
   );
