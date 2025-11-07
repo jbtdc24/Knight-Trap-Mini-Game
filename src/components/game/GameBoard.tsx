@@ -106,10 +106,10 @@ const GameBoard = ({
   };
   
   const knightTransition = {
-    default: { ease: 'backOut', duration: 0.6 },
-    y: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
-    x: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
-    scale: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+    default: { ease: 'backOut', duration: 0.3 },
+    y: { ease: 'backOut', duration: 0.3, times: [0, 0.5, 1] },
+    x: { ease: 'backOut', duration: 0.3, times: [0, 0.5, 1] },
+    scale: { ease: 'backOut', duration: 0.3, times: [0, 0.5, 1] },
   }
 
   return (
