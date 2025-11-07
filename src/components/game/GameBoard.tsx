@@ -276,15 +276,7 @@ const GameBoard = ({
               transition={knightTransition}
             >
               <div className="relative h-full w-full">
-                <ShadowKnightIcon />
-                {knight.isFrozen && (
-                  <motion.div 
-                    className="absolute inset-0 bg-blue-500/50 rounded-full"
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0 }}
-                  />
-                )}
+                <ShadowKnightIcon isFrozen={knight.isFrozen} />
               </div>
             </motion.div>
           );
