@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import HowToPlayDialog from './HowToPlayDialog';
 import { useAudio } from '@/context/AudioContext';
 import { useSfx } from '@/hooks/use-sfx';
+import AuthButton from './AuthButton'; // Import the new component
 
 export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void }) {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
@@ -30,13 +31,14 @@ export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void })
 
   return (
     <>
+      <AuthButton /> {/* Add the new component here */}
       <audio ref={audioRef} src="/sfx/HomeScreen.MP3" preload="auto"></audio>
       <div 
         className="relative flex h-screen w-screen flex-col items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: "url('/home-background.png')" }}
       >
         <div className="flex flex-col items-center gap-12 mb-20">
-          <img src="/Logo 8bit.png" alt="Logo" className="w-80 sm:w-96 md:w-[500px]" />
+          <img src="/Logo 8bit.png" alt="Logo" className="w-[461px] sm:w-[538px] md:w-[720px]" />
           
           <div className="flex flex-col items-center gap-4">
             <img 
@@ -55,6 +57,8 @@ export default function HomeScreen({ onPlayClick }: { onPlayClick: () => void })
               onMouseEnter={() => playSound('hover')}
               onMouseDown={() => playSound('click')}
             />
+
+            {/* The old sign-in/out buttons have been removed from here */}
           </div>
         </div>
       </div>

@@ -1,12 +1,16 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Bomb, GameStatus, Position, ShadowKnight, ExplosionMark as ExplosionMarkType } from '@/lib/types';
+import type { GameBoardProps, Position } from '@/lib/types';
 import { KnightIcon } from '../icons/KnightIcon';
 import { ShadowKnightIcon } from '../icons/ShadowKnightIcon';
 import { Explosion } from '../icons/Explosion';
 import { useEffect, useRef } from 'react';
 import { isSamePosition } from '@/lib/game-logic';
+import Trail from './Trail';
+import FreezeRune from './FreezeRune';
+import { FluxRune } from '../icons/FluxRune';
+import Bomb from './Bomb';
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
@@ -17,24 +21,11 @@ function usePrevious<T>(value: T): T | undefined {
   return ref.current;
 }
 
-type GameBoardProps = {
-  whiteKnightPos: Position;
-  shadowKnights: ShadowKnight[];
-  bombs: Bomb[];
-  explosions: Position[];
-  explosionMarks: ExplosionMarkType[];
-  onMove: (pos: Position) => void;
-  gameStatus: GameStatus;
-  isAiThinking: boolean;
-  boardShake: number;
-  illegalMovePos: Position | null;
-};
-
 const getLMoveAnimation = (from: Position | undefined, to: Position) => {
   if (!from || (to && isSamePosition(from, to))) {
     const y = to ? `${to[0] * 100}%` : (from ? `${from[0] * 100}%` : '0%');
     const x = to ? `${to[1] * 100}%` : (from ? `${from[1] * 100}%` : '0%');
-    return { y, x, transition: { duration: 0 } };
+    return { y, x, scale: 1.5 }; // Keep it scaled
   }
 
   const fromY = `${from[0] * 100}%`;
@@ -44,16 +35,30 @@ const getLMoveAnimation = (from: Position | undefined, to: Position) => {
 
   const dx = to[1] - from[1];
   const dy = to[0] - from[0];
+
+  if (dx === 0 && dy === 0) {
+    return { y: toY, x: toX, scale: 1.5 };
+  }
+
+  // Midpoint of the move
+  const midX = from[1] + dx / 2;
+  const midY = from[0] + dy / 2;
+
+  // Calculate a perpendicular offset
   const dist = Math.sqrt(dx * dx + dy * dy);
-  const overshootAmount = dist > 0 ? 0.2 : 0;
-  const normDx = dist > 0 ? dx / dist : 0;
-  const normDy = dist > 0 ? dy / dist : 0;
-  const overshootX = `${(to[1] + normDx * overshootAmount) * 100}%`;
-  const overshootY = `${(to[0] + normDy * overshootAmount) * 100}%`;
+  const arcMagnitude = 0.75; // Controls the "height" of the arc.
+
+  // Perpendicular vector: (-dy, dx), normalized and scaled
+  const offsetX = (-dy / dist) * arcMagnitude;
+  const offsetY = (dx / dist) * arcMagnitude;
+
+  const arcX = `${(midX + offsetX) * 100}%`;
+  const arcY = `${(midY + offsetY) * 100}%`;
 
   return {
-    y: [fromY, overshootY, toY],
-    x: [fromX, overshootX, toX],
+    y: [fromY, arcY, toY],
+    x: [fromX, arcX, toX],
+    scale: [1.5, 2, 1.5], // From normal size, to bigger, back to normal
     zIndex: 10,
   };
 };
@@ -62,13 +67,21 @@ const GameBoard = ({
   whiteKnightPos,
   shadowKnights,
   bombs,
+  bombTransitions,
   explosions,
   explosionMarks,
+  trails,
   onMove,
   gameStatus,
   isAiThinking,
   boardShake,
   illegalMovePos,
+  availableMoves,
+  freezeRune,
+  fluxRune,
+  runeCollecting,
+  onRuneAnimationComplete,
+  collectingItemType
 }: GameBoardProps) => {
   const prevWhiteKnightPos = usePrevious(whiteKnightPos);
   const prevShadowKnights = usePrevious(shadowKnights);
@@ -91,6 +104,13 @@ const GameBoard = ({
 
     onMove([row, col]);
   };
+  
+  const knightTransition = {
+    default: { ease: 'backOut', duration: 0.6 },
+    y: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+    x: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+    scale: { ease: 'backOut', duration: 0.6, times: [0, 0.5, 1] },
+  }
 
   return (
     <motion.div
@@ -103,30 +123,98 @@ const GameBoard = ({
       onClick={handleBoardClick}
     >
       <AnimatePresence>
-        {bombs.map((bomb) => (
+        {trails.map((trail) => (
+          <Trail key={trail.id} path={trail.path} />
+        ))}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {availableMoves.map((move) => (
           <motion.div
-            key={`bomb-${bomb.position[0]}-${bomb.position[1]}`}
+            key={`available-move-${move[0]}-${move[1]}`}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.5, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             className="pointer-events-none absolute h-[12.5%] w-[12.5%] flex items-center justify-center"
-            style={{ top: `${bomb.position[0] * 12.5}%`, left: `${bomb.position[1] * 12.5}%` }}
+            style={{ top: `${move[0] * 12.5}%`, left: `${move[1] * 12.5}%` }}
           >
-            <motion.img
-              src="/Bomb.png"
-              alt="Bomb"
-              animate={{
-                filter: [
-                  'drop-shadow(0 0 2px #F87171)',
-                  'drop-shadow(0 0 10px #EF4444)',
-                  'drop-shadow(0 0 2px #F87171)',
-                ],
-              }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            <motion.div
+                className="h-1/3 w-1/3 rounded-full bg-green-500/50"
+                animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.5, 0.7, 0.5]
+                }}
+                transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut'
+                }}
             />
           </motion.div>
         ))}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {bombs.map((bomb) => {
+          const isTransitioning = bombTransitions.find(t => t.id === bomb.id);
+          return <Bomb key={bomb.id} bomb={bomb} isTransitioning={isTransitioning} />;
+        })}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {runeCollecting && (
+          <motion.div
+            key="rune-collecting"
+            className="absolute h-[12.5%] w-[12.5%] z-30"
+            initial={{
+              top: `${runeCollecting[0] * 12.5}%`,
+              left: `${runeCollecting[1] * 12.5}%`,
+              scale: 1,
+            }}
+            animate={{
+              top: `100%`,
+              left: `45%`,
+              scale: 0.2,
+              opacity: 0.5,
+            }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            onAnimationComplete={onRuneAnimationComplete}
+          >
+            {collectingItemType === 'freeze' && <FreezeRune />}
+            {collectingItemType === 'flux' && <FluxRune />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {freezeRune && !runeCollecting && (
+          <motion.div
+            key={freezeRune.id}
+            className="absolute h-[12.5%] w-[12.5%]"
+            style={{ top: `${freezeRune.position[0] * 12.5}%`, left: `${freezeRune.position[1] * 12.5}%` }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+          >
+            <FreezeRune />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {fluxRune && !runeCollecting && (
+          <motion.div
+            key={fluxRune.id}
+            className="absolute h-[12.5%] w-[12.5%]"
+            style={{ top: `${fluxRune.position[0] * 12.5}%`, left: `${fluxRune.position[1] * 12.5}%` }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+          >
+            <FluxRune />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -157,17 +245,20 @@ const GameBoard = ({
       </AnimatePresence>
 
       <AnimatePresence>
-        <motion.div
-          key="white-knight"
-          className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
-          initial={false}
-          animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
-          transition={{ duration: 0.1, ease: 'circOut', times: [0, 0.7, 1] }}
-        >
-          <motion.div className="h-full w-full" animate={{ scale: 1.5 }}>
-            <KnightIcon />
+        {gameStatus !== 'lost' && (
+          <motion.div
+            key="white-knight"
+            className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
+            initial={false}
+            animate={getLMoveAnimation(prevWhiteKnightPos, whiteKnightPos)}
+            exit={{ scale: 0, opacity: 0, rotate: 45, transition: { duration: 0.5, ease: 'easeInOut' } }}
+            transition={knightTransition}
+          >
+            <div className="h-full w-full">
+              <KnightIcon />
+            </div>
           </motion.div>
-        </motion.div>
+        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -181,11 +272,20 @@ const GameBoard = ({
               className="pointer-events-none absolute h-[12.5%] w-[12.5%]"
               initial={false}
               animate={getLMoveAnimation(oldPos, knight.position)}
-              transition={{ duration: 0.1, ease: 'circOut', times: [0, 0.7, 1] }}
+              exit={{ scale: 0, opacity: 0, rotate: 45, transition: { duration: 0.5, ease: 'easeInOut' } }}
+              transition={knightTransition}
             >
-              <motion.div className="h-full w-full" animate={{ scale: 1.5 }}>
+              <div className="relative h-full w-full">
                 <ShadowKnightIcon />
-              </motion.div>
+                {knight.isFrozen && (
+                  <motion.div 
+                    className="absolute inset-0 bg-blue-500/50 rounded-full"
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0 }}
+                  />
+                )}
+              </div>
             </motion.div>
           );
         })}

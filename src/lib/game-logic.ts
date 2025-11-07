@@ -12,6 +12,7 @@ export const isOutOfBounds = (pos: Position): boolean => {
 };
 
 export const isSamePosition = (pos1: Position, pos2: Position): boolean => {
+  if (!pos1 || !pos2) return false;
   return pos1[0] === pos2[0] && pos1[1] === pos2[1];
 }
 
@@ -49,10 +50,9 @@ export const isMoveLegal = (
 export const getRandomEmptySquare = (
   board: BoardSquare[][],
   occupiedPositions: Position[],
-  bombs?: Bomb[]
+  bombPositions: Position[] = []
 ): Position | null => {
   const emptySquares: Position[] = [];
-  const bombPositions = bombs ? bombs.map(b => b.position) : [];
 
   for (let i = 0; i < BOARD_SIZE; i++) {
     for (let j = 0; j < BOARD_SIZE; j++) {
@@ -76,3 +76,31 @@ export const getRandomEmptySquare = (
 export function deepCopy<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
+
+export const getFurthestEmptySquare = (
+    board: BoardSquare[][],
+    occupiedPositions: Position[],
+    bombPositions: Position[],
+    referencePosition: Position
+): Position | null => {
+    let furthestSquare: Position | null = null;
+    let maxDist = -1;
+
+    for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+            const pos: Position = [i, j];
+            const isOccupied = occupiedPositions.some(p => isSamePosition(p, pos));
+            const hasBomb = bombPositions.some(p => isSamePosition(p, pos));
+
+            if (!isOccupied && !hasBomb) {
+                const dist = Math.abs(pos[0] - referencePosition[0]) + Math.abs(pos[1] - referencePosition[1]);
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    furthestSquare = pos;
+                }
+            }
+        }
+    }
+
+    return furthestSquare;
+};
